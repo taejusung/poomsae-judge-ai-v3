@@ -31,10 +31,10 @@ select option{background:#111827}
 .btn-main{width:100%;background:linear-gradient(135deg,#e84393,#7b2fff);color:#fff;padding:16px;font-size:1.05rem;border-radius:14px;margin-top:6px}
 .rank-hint{color:#7a8494;font-size:.78rem;text-align:center;margin-top:8px}
 
-/* ── 화면2 카메라 (🛠️ 후면 카메라 매핑을 위해 좌우 반전 제거) ── */
+/* ── 화면2 카메라 (🛠️ 하체 탈출을 위해 높이 비율 수정 및 좌우 반전 제거) ── */
 #s2{padding:0;background:#000}
 .cam-wrap{position:relative;width:100%;background:#000;flex-shrink:0}
-#video{display:block;width:100%;max-height:52dvh;object-fit:cover}
+#video{display:block;width:100%;max-height:65dvh;object-fit:contain}
 #canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .hud-tl{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
 .hud-tr{position:absolute;top:8px;right:8px;pointer-events:none}
@@ -641,7 +641,6 @@ function detectTech(lm,lh,rh){
   if(!cd)return null;
   const {hipY,shY,sw}=cd;
   const la=lm[27],ra=lm[28],lw=lm[15],rw=lm[16];
-  const cx=(lm[11].x+lm[12].x)/2;
 
   // 발차기
   const kickH=Math.max(0,hipY-Math.min(la.y,ra.y));
@@ -662,7 +661,7 @@ function detectTech(lm,lh,rh){
 }
 
 // ══════════════════════════════════════════
-//  채점
+//  채점 (🛠️ 현재 동작 타겟에 맞는 가중치 필터링 기능 추가)
 // ══════════════════════════════════════════
 function scoreFrame(lm,lh,rh){
   if(!lm)return null;
@@ -670,7 +669,9 @@ function scoreFrame(lm,lh,rh){
   if(!cd)return null;
   const {sw,hipY,shY}=cd;
 
-  // 서기
+  const currentAction=poomSeq[step]||{t:'-',s:'-'};
+
+  // 서기 채점
   let st=10;
   {
     const lk=ang3(lm[23],lm[25],lm[27]),rk=ang3(lm[24],lm[26],lm[28]);
@@ -679,10 +680,15 @@ function scoreFrame(lm,lh,rh){
     const bS=mx>=150&&mx<=180?6:cl(6-Math.abs(mx-165)/4,0,6);
     const fd=Math.hypot(lm[31].x-lm[32].x,lm[31].y-lm[32].y);
     const fdS=cl(5-Math.abs(fd-sw*1.7)/sw*10,0,5);
-    st=cl(fS+bS+fdS,0,20);
+    
+    let baseSt=cl(fS+bS+fdS,0,20);
+    // 🛠️ 동작 DB의 서기 규격(s)과 일치하면 가산점/불일치 시 디버프 가중치 연산
+    if(currentAction.s==='F' && mn>155) baseSt *= 0.85; // 앞굽이인데 무릎을 너무 폈을 때
+    if(currentAction.s==='B' && mx<140) baseSt *= 0.85; // 뒷굽이인데 체중 분배가 깨졌을 때
+    st=cl(baseSt,0,20);
   }
 
-  // 손기술
+  // 손기술 채점
   let ar=0;
   {
     const lE=ang3(lm[11],lm[13],lm[15]),rE=ang3(lm[12],lm[14],lm[16]);
@@ -694,7 +700,12 @@ function scoreFrame(lm,lh,rh){
     const hS=(rel<0||(rel>=.3&&rel<=.7))?4:2;
     const shp=handShape(lE>rE?lh:rh);
     const shpB=shp==='fist'?2:shp==='open'?1.5:1;
-    ar=cl(pS+pullS+hS+shpB,0,20);
+    
+    let baseAr=cl(pS+pullS+hS+shpB,0,20);
+    // 🛠️ 지르기(PU)나 막기(BL) 타겟 기술에 맞게 손모양 패널티 가중치 차등 적용
+    if(currentAction.t==='PU' && shp==='open') baseAr *= 0.7; // 지르기인데 손을 폈을 때
+    if(currentAction.t==='KN' && shp==='fist') baseAr *= 0.7; // 손날치기인데 주먹을 쥐었을 때
+    ar=cl(baseAr,0,20);
   }
 
   // 자세
@@ -755,7 +766,7 @@ function scoreFrame(lm,lh,rh){
 }
 
 // ══════════════════════════════════════════
-//  스무딩 (비대칭, 버그2 수정)
+//  스무딩
 // ══════════════════════════════════════════
 function applySmooth(k,raw){
   const up=raw>sm[k];
@@ -763,9 +774,6 @@ function applySmooth(k,raw){
   if(sm[k]>pk[k])pk[k]=sm[k];
 }
 
-// ══════════════════════════════════════════
-//  기술 이력 추가 (버그2)
-// ══════════════════════════════════════════
 function addTech(ts){
   const sum=t=>t.st+t.ar+t.pw;
   if(techHist.length>3){
@@ -774,50 +782,56 @@ function addTech(ts){
   }
   techHist.push(ts);
   if(techHist.length>TMAX)techHist.shift();
-  if(techHist.length>=8){
-    techHist.sort((a,b)=>sum(a)-sum(b));
-    techHist=techHist.slice(Math.floor(techHist.length*.25));
-  }
 }
 
 // ══════════════════════════════════════════
-//  기술 완료 → 시퀀스
+//  🛠️ 자율형 실시간 시퀀스 싱크 알고리즘 (부령 프리 자동 인식)
 // ══════════════════════════════════════════
-let mismatchStep=-1;
 function onTechDone(lm,lh,rh){
   if(!scoring||isFrozen)return;
   const det=detectTech(lm,lh,rh);
   if(!det)return;
-  const exp=poomSeq[step];
-  if(!exp)return;
 
-  // 간략 매칭: 기술 계열 비교
-  const tMatch=techFamilyMatch(det.t,exp.t);
-  const hMatch=!exp.h||exp.h==='-'||det.h===exp.h;
-  const matched=tMatch&&hMatch;
+  let bestMatchStep = -1;
+  // 🛠️ 탐색 윈도우 스캔: 현재 인덱스 기준 앞뒤 3단계 범위를 동적 추적하여 자동 싱크 매칭
+  let startLook = Math.max(0, step - 1);
+  let endLook = Math.min(poomSeq.length - 1, step + 3);
 
-  // 기합 필요 동작 경고
-  if(exp.kihap&&kiaiCnt===0&&step===step){
-    document.getElementById('sh-match').textContent='⚠️ 기합 필요!';
-    document.getElementById('sh-match').style.color='#ff9966';
+  for(let i = startLook; i <= endLook; i++){
+    const exp = poomSeq[i];
+    if(techFamilyMatch(det.t, exp.t)){
+      bestMatchStep = i;
+      break; 
+    }
+  }
+
+  // 🛠️ 매칭된 단계가 검색망에 걸리면 사범님이 손대지 않아도 시퀀스가 자동으로 점프(인식)함
+  if(bestMatchStep !== -1){
+    step = bestMatchStep; 
+    const exp = poomSeq[step];
+    
+    document.getElementById('sh-match').textContent='✅ 동작 인식';
+    document.getElementById('sh-match').style.color='#3ddc84';
+    
+    if(exp.kihap && kiaiCnt === 0){
+      document.getElementById('sh-match').textContent='⚠️ 기합 누락 경고';
+      document.getElementById('sh-match').style.color='#ff9966';
+    }
+
+    // 다음 동작 대기를 위해 인덱스 한 칸 사전 준비
+    if(step < poomSeq.length - 1){
+      setTimeout(() => { if(scoring && !isFrozen && step === bestMatchStep) { step++; updateSeqUI(); } }, 1200);
+    }
   } else {
-    document.getElementById('sh-match').textContent=matched?'✅ 일치':'❌ 불일치';
-    document.getElementById('sh-match').style.color=matched?'#3ddc84':'#ff5252';
+    // 완전 비정상적인 동작일 때만 경고 처리
+    const exp = poomSeq[step];
+    document.getElementById('sh-match').textContent=`❌ 미스 매치 (대기: ${exp.desc})`;
+    document.getElementById('sh-match').style.color='#ff5252';
   }
-
-  if(!matched){
-    // 불일치 패널 표시
-    mismatchStep=step;
-    document.getElementById('mo-lbl').textContent=`❌ #${step+1} ${exp.desc} – 감지: ${det.t}`;
-    document.getElementById('mismatch-ov').classList.add('on');
-    setTimeout(()=>document.getElementById('mismatch-ov').classList.remove('on'),6000);
-  }
-
-  if(step<poomSeq.length-1){step++;updateSeqUI();}
+  updateSeqUI();
 }
 
 function techFamilyMatch(got,exp){
-  // 같으면 true, KN/KN2 같은 계열도 허용
   if(got===exp)return true;
   const fam={
     BL:['BL','BL2','KN','KN2','PB'],
@@ -831,7 +845,7 @@ function techFamilyMatch(got,exp){
 }
 
 function applyMismatch(amt){
-  seqDeds.push({step:mismatchStep,desc:poomSeq[mismatchStep]?.desc||'?',amount:amt});
+  seqDeds.push({step:step,desc:poomSeq[step]?.desc||'?',amount:amt});
   updateSeqDedUI();
   closeMismatch();
 }
@@ -846,7 +860,6 @@ function updateSeqUI(){
   const stepTxt=`동작 ${step+1} / ${tot}`;
   document.getElementById('sh-step').textContent=stepTxt;
   document.getElementById('sh-desc').textContent=s.desc;
-  document.getElementById('sh-match').textContent='';
   document.getElementById('sd-step').textContent=stepTxt;
   document.getElementById('sd-exp').textContent=s.desc+(s.kihap?' ★기합':'');
   document.getElementById('sd-exp').style.color=s.kihap?'#ff9966':'#ffd740';
@@ -864,9 +877,6 @@ function undoLastDed(){
   seqDeds.pop();updateSeqDedUI();toast('마지막 감점 취소');
 }
 
-// ══════════════════════════════════════════
-//  동결
-// ══════════════════════════════════════════
 function doFreeze(){
   isFrozen=true;frozenSc={...sm};
   document.getElementById('frozen-badge').style.display='inline';
@@ -876,14 +886,13 @@ function doFreeze(){
 }
 
 // ══════════════════════════════════════════
-//  onResults (MediaPipe)
+//  onResults
 // ══════════════════════════════════════════
 function onResults(res){
   const video=document.getElementById('video');
   const canvas=document.getElementById('canvas');
   const ctx=canvas.getContext('2d');
 
-  // 버그1: canvas 크기 동기화
   const r=video.getBoundingClientRect();
   if(canvas.width!==r.width||canvas.height!==r.height){
     canvas.width=r.width;canvas.height=r.height;
@@ -905,7 +914,6 @@ function onResults(res){
 
   const lm=res.poseLandmarks,lh=res.leftHandLandmarks,rh=res.rightHandLandmarks;
 
-  // 배지
   const mpB=document.getElementById('mp-badge');
   mpB.textContent=lm?'🟢 감지중':'🔴 미감지';
   mpB.className='badge '+(lm?'g':'r');
@@ -925,7 +933,6 @@ function onResults(res){
     if(raw){
       Object.keys(raw).forEach(k=>applySmooth(k,raw[k]));
 
-      // 각속도 상태머신
       const curAV=avHist.length?avHist[avHist.length-1]:0;
       if(techPhase==='idle'){
         if(curAV>MOVE_T){techPhase='moving';phFrames=1;}
@@ -945,7 +952,6 @@ function onResults(res){
         }
       }
 
-      // 동결 체크
       const el=Date.now()-scoreStart;
       const prog=cl(el/10000,0,1);
       document.getElementById('fbar').style.width=(prog*100)+'%';
@@ -954,11 +960,10 @@ function onResults(res){
         (Math.hypot(lm[25].x-prevLM[25].x,lm[25].y-prevLM[25].y)+
          Math.hypot(lm[26].x-prevLM[26].x,lm[26].y-prevLM[26].y))*.5:1;
       if(mo<.006)stillFrames++;else stillFrames=0;
-      if(el>10000&&stillFrames>=18)doFreeze();
+      if(el>15000 && stillFrames>=35) doFreeze(); // 🛠️ 자동 묵음 완료 범위 여유 확보
       else if(el>=10000)document.getElementById('fbar-lbl').textContent='✅ 동결 보호 활성화';
     }
 
-    // 피크 보호
     const fs={};
     ['st','ar','po','pw','ba','rh'].forEach(k=>{fs[k]=Math.max(sm[k],pk[k]*.85);});
     const tot=cl(fs.st+fs.ar+fs.po+fs.pw+fs.ba+fs.rh+kiaiSc,0,100);
@@ -968,22 +973,18 @@ function onResults(res){
 }
 
 // ══════════════════════════════════════════
-//  점수 UI
+//  나머지 점수 및 시스템 코어 (규격 보존)
 // ══════════════════════════════════════════
 const maxMap={st:20,ar:20,po:20,pw:20,ba:10,rh:10};
 const idMap={st:'sc-st',ar:'sc-ar',po:'sc-po',pw:'sc-pw',ba:'sc-ba',rh:'sc-rh'};
 function updateScoreUI(fs,tot){
   ['st','ar','po','pw','ba','rh'].forEach(k=>{
     const el=document.getElementById(idMap[k]);
-    el.textContent=fs[k].toFixed(1);
-    el.className='sv '+cv(fs[k],maxMap[k]);
+    if(el){el.textContent=fs[k].toFixed(1);el.className='sv '+cv(fs[k],maxMap[k]);}
   });
   document.getElementById('sc-tot').textContent=tot.toFixed(1);
 }
 
-// ══════════════════════════════════════════
-//  기합 마이크
-// ══════════════════════════════════════════
 async function initMic(){
   try{
     const ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
@@ -1009,12 +1010,9 @@ function tickMic(){
   requestAnimationFrame(tickMic);
 }
 
-// ══════════════════════════════════════════
-//  카메라 (🛠️ facingMode를 'environment'로 변경하여 후면 카메라로 지정)
-// ══════════════════════════════════════════
+// 🛠️ 후면 강제 구동 객체 셋팅 유지
 async function initCam(){
   const video=document.getElementById('video'),canvas=document.getElementById('canvas');
-  // 버그1: ResizeObserver
   const ro=new ResizeObserver(()=>{
     const r=video.getBoundingClientRect();
     if(r.width>0){canvas.width=r.width;canvas.height=r.height;}
@@ -1022,7 +1020,7 @@ async function initCam(){
   ro.observe(video);
   try{
     camStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},audio:false});
+      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
     video.srcObject=camStream;
     video.onloadedmetadata=()=>{video.play();runLoop(video);};
   }catch(e){toast('카메라 오류: '+e.message);}
@@ -1039,13 +1037,10 @@ function stopCam(){
   if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
 }
 
-// ══════════════════════════════════════════
-//  보정
-// ══════════════════════════════════════════
-let calibTimer=null;
 function doCalib(){
   const ov=document.getElementById('calib-ov'),n=document.getElementById('calib-n');
   ov.classList.add('on');let cnt=3;n.textContent=cnt;
+  calibData=null;
   calibTimer=setInterval(()=>{
     cnt--;n.textContent=cnt;
     if(cnt<=0){
@@ -1056,9 +1051,6 @@ function doCalib(){
   },1000);
 }
 
-// ══════════════════════════════════════════
-//  화면 전환
-// ══════════════════════════════════════════
 function goMeasure(){
   playerName=document.getElementById('inp-name').value.trim()||'선수';
   poomName=document.getElementById('sel-poom').value;
@@ -1077,7 +1069,7 @@ function resetState(){
   document.getElementById('fbar-lbl').textContent='채점 시작 후 10초 보호 구간';
   document.getElementById('fbar-lbl').style.color='';
   document.getElementById('frozen-badge').style.display='none';
-  document.getElementById('sh-match').textContent='';
+  if(document.getElementById('sh-match')) document.getElementById('sh-match').textContent='';
   document.getElementById('btn-go').disabled=false;
   updateScoreUI({st:0,ar:0,po:0,pw:0,ba:0,rh:0},0);
 }
@@ -1099,9 +1091,6 @@ function stopScore(){
   scr('s3');
 }
 
-// ══════════════════════════════════════════
-//  화면3
-// ══════════════════════════════════════════
 const keyList=['st','ar','po','pw','ba','rh'];
 const keyName={st:'서기(20)',ar:'손기술(20)',po:'자세(20)',pw:'절도(20)',ba:'균형(10)',rh:'리듬(10)'};
 let adjBase={};
@@ -1121,7 +1110,6 @@ function buildAdjScreen(fs){
       </div>`;
     g.appendChild(d);
   });
-  // 시퀀스 로그
   const seqTot=seqDeds.reduce((s,d)=>s+d.amount,0);
   document.getElementById('s3-seq-tot').textContent=seqTot.toFixed(1)+'점';
   document.getElementById('s3-seq-log').innerHTML=seqDeds.length?
@@ -1158,9 +1146,6 @@ function confirmScore(){
 }
 function remeasure(){resetState();scr('s2');}
 
-// ══════════════════════════════════════════
-//  화면4
-// ══════════════════════════════════════════
 const medals=['🥇','🥈','🥉'];
 function buildRankScreen(){
   document.getElementById('rank-list').innerHTML=rankings.map((r,i)=>`
@@ -1184,9 +1169,6 @@ function resetAll(){
   document.getElementById('rank-hint').textContent='';
 }
 
-// ══════════════════════════════════════════
-//  MediaPipe 초기화
-// ══════════════════════════════════════════
 function initMP(){
   holistic=new Holistic({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${f}`});
   holistic.setOptions({modelComplexity:1,smoothLandmarks:true,
