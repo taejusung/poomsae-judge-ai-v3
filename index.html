@@ -31,11 +31,11 @@ select option{background:#111827}
 .btn-main{width:100%;background:linear-gradient(135deg,#e84393,#7b2fff);color:#fff;padding:16px;font-size:1.05rem;border-radius:14px;margin-top:6px}
 .rank-hint{color:#7a8494;font-size:.78rem;text-align:center;margin-top:8px}
 
-/* ── 화면2 카메라 ── */
+/* ── 화면2 카메라 (🛠️ 후면 카메라 매핑을 위해 좌우 반전 제거) ── */
 #s2{padding:0;background:#000}
 .cam-wrap{position:relative;width:100%;background:#000;flex-shrink:0}
-#video{display:block;width:100%;max-height:52dvh;object-fit:cover;transform:scaleX(-1)}
-#canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none}
+#video{display:block;width:100%;max-height:52dvh;object-fit:cover}
+#canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .hud-tl{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
 .hud-tr{position:absolute;top:8px;right:8px;pointer-events:none}
 .badge{display:inline-block;background:rgba(0,0,0,.72);border-radius:8px;padding:3px 8px;font-size:.72rem;backdrop-filter:blur(6px)}
@@ -173,7 +173,6 @@ select option{background:#111827}
   </div>
 </div>
 
-<!-- ════ 화면1: 이름+품새 ════ -->
 <div class="scr" id="s1">
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:420px;margin:0 auto;width:100%;padding:24px 20px">
     <div class="logo">🥋</div>
@@ -200,7 +199,6 @@ select option{background:#111827}
   </div>
 </div>
 
-<!-- ════ 화면2: 카메라+채점 ════ -->
 <div class="scr" id="s2">
   <div class="cam-wrap" id="cam-wrap">
     <video id="video" autoplay playsinline muted></video>
@@ -266,7 +264,6 @@ select option{background:#111827}
   </div>
 </div>
 
-<!-- ════ 화면3: 결과조정 ════ -->
 <div class="scr" id="s3" style="overflow-y:auto">
   <h2>📊 채점 조정</h2>
   <div class="adj-grid" id="adj-grid"></div>
@@ -302,7 +299,6 @@ select option{background:#111827}
   <div style="height:20px"></div>
 </div>
 
-<!-- ════ 화면4: 순위 ════ -->
 <div class="scr" id="s4" style="overflow-y:auto">
   <h2>🏆 전체 순위</h2>
   <div class="rank-list" id="rank-list"></div>
@@ -1014,7 +1010,7 @@ function tickMic(){
 }
 
 // ══════════════════════════════════════════
-//  카메라
+//  카메라 (🛠️ facingMode를 'environment'로 변경하여 후면 카메라로 지정)
 // ══════════════════════════════════════════
 async function initCam(){
   const video=document.getElementById('video'),canvas=document.getElementById('canvas');
@@ -1026,7 +1022,7 @@ async function initCam(){
   ro.observe(video);
   try{
     camStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+      video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},audio:false});
     video.srcObject=camStream;
     video.onloadedmetadata=()=>{video.play();runLoop(video);};
   }catch(e){toast('카메라 오류: '+e.message);}
