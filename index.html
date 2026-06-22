@@ -2,1189 +2,966 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>품새 AI 심판</title>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>품새 AI 심판 v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#080c10;color:#e8eaf0;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
-.scr{display:none;min-height:100dvh;flex-direction:column}
-.scr.on{display:flex}
-
-/* ── 공통 ── */
-h1{font-size:1.6rem;font-weight:800;text-align:center;letter-spacing:-.5px}
-h2{font-size:1.15rem;font-weight:700;margin-bottom:10px}
-.sub{color:#7a8494;font-size:.82rem;text-align:center;margin-top:4px}
-btn,button{border:none;border-radius:12px;padding:12px 16px;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .12s,transform .08s;font-family:inherit}
-button:active{opacity:.7;transform:scale(.97)}
-input,select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid #1e2535;background:#111827;color:#e8eaf0;font-size:1rem;margin-bottom:10px;outline:none;font-family:inherit}
-input:focus,select:focus{border-color:#5b6ef5}
-select option{background:#111827}
-.card{background:#111827;border-radius:16px;padding:14px;margin-bottom:10px}
-.row{display:flex;gap:8px}
-.col{flex:1}
-
-/* ── 화면1 ── */
-#s1{justify-content:center;padding:24px 20px}
-.logo{font-size:3.5rem;text-align:center;margin-bottom:12px}
-.btn-main{width:100%;background:linear-gradient(135deg,#e84393,#7b2fff);color:#fff;padding:16px;font-size:1.05rem;border-radius:14px;margin-top:6px}
-.rank-hint{color:#7a8494;font-size:.78rem;text-align:center;margin-top:8px}
-
-/* ── 화면2 카메라 (🛠️ 하체 탈출을 위해 높이 비율 수정 및 좌우 반전 제거) ── */
-#s2{padding:0;background:#000}
-.cam-wrap{position:relative;width:100%;background:#000;flex-shrink:0}
-#video{display:block;width:100%;max-height:65dvh;object-fit:contain}
-#canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-.hud-tl{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
-.hud-tr{position:absolute;top:8px;right:8px;pointer-events:none}
-.badge{display:inline-block;background:rgba(0,0,0,.72);border-radius:8px;padding:3px 8px;font-size:.72rem;backdrop-filter:blur(6px)}
-.g{color:#3ddc84}.r{color:#ff5252}.y{color:#ffd740}.b{color:#40c4ff}
-
-/* 시퀀스 HUD (카메라 위) */
-.seq-hud{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.88));padding:10px 12px 8px}
-.seq-hud-step{font-size:.68rem;color:#aaa}
-.seq-hud-desc{font-size:1rem;font-weight:700;color:#ffd740;line-height:1.2}
-.seq-hud-match{font-size:.78rem;margin-top:2px;min-height:1.1em}
-
-/* 점수 패널 */
-.score-panel{padding:8px 12px 0;flex-shrink:0}
-.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
-.si{background:#0d1421;border-radius:10px;padding:7px 5px;text-align:center}
-.sl{display:block;font-size:.6rem;color:#5a6478;margin-bottom:1px}
-.sv{font-size:1.15rem;font-weight:700}
-.sv.gd{color:#3ddc84}.sv.md{color:#ffd740}.sv.bd{color:#ff6b6b}
-.total-row{display:flex;justify-content:space-between;align-items:center;background:#0d1421;border-radius:10px;padding:7px 12px;margin-bottom:6px}
-.total-n{font-size:1.9rem;font-weight:800;color:#ffd740}
-
-/* 동결 바 */
-.fbar-wrap{height:5px;background:#1e2535;border-radius:3px;margin:0 0 4px;overflow:hidden}
-.fbar-fill{height:100%;background:linear-gradient(90deg,#7b2fff,#e84393);border-radius:3px;transition:width .2s}
-.fbar-lbl{font-size:.65rem;color:#5a6478;text-align:center;margin-bottom:6px}
-
-/* 기합 */
-.kiai-row{display:flex;align-items:center;gap:8px;padding:0 12px 6px}
-.kiai-bar-w{flex:1;height:8px;background:#1e2535;border-radius:4px;overflow:hidden}
-.kiai-bar{height:100%;background:linear-gradient(90deg,#ff5252,#ffd740);border-radius:4px;transition:width .04s}
-.kiai-lbl{font-size:.75rem;color:#ffd740;white-space:nowrap;min-width:70px;text-align:right}
-
-/* 시퀀스 상세 */
-.seq-detail{background:#0d1421;margin:0 10px 6px;border-radius:12px;padding:8px 10px;flex-shrink:0}
-.seq-det-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
-.seq-det-step{font-size:.75rem;color:#7a8494}
-.seq-det-ded{font-size:.78rem;font-weight:700;color:#ff6b6b}
-.seq-det-exp{font-size:.82rem;margin-bottom:6px}
-.seq-nav{display:flex;gap:5px}
-.btn-seq{background:#1e2535;color:#c8ccd4;flex:1;font-size:.78rem;padding:7px 4px}
-.btn-ov{background:#0f2a18;color:#3ddc84;font-size:.72rem;padding:7px 4px}
-
-/* 컨트롤 */
-.ctrl{display:flex;gap:6px;padding:6px 10px 8px;flex-shrink:0}
-.btn-cal{background:#102040;color:#40c4ff;flex:1;font-size:.8rem;padding:9px}
-.btn-go{background:linear-gradient(135deg,#3ddc84,#00b4d8);color:#000;flex:1;font-size:.8rem;padding:9px}
-.btn-stp{background:#200a0a;color:#ff5252;flex:1;font-size:.8rem;padding:9px}
-
-/* ── 화면3 조정 ── */
-#s3{padding:14px 12px}
-.adj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.adj-item{background:#111827;border-radius:12px;padding:10px}
-.adj-nm{font-size:.68rem;color:#7a8494;margin-bottom:3px}
-.adj-row{display:flex;align-items:center;justify-content:space-between}
-.adj-v{font-size:1.25rem;font-weight:700;color:#e8eaf0;min-width:36px}
-.adj-btns{display:flex;gap:3px}
-.btn-m{background:#200a0a;color:#ff6b6b;padding:5px 9px;font-size:.9rem}
-.btn-p{background:#0a1f0a;color:#3ddc84;padding:5px 9px;font-size:.9rem}
-
-.sec-lbl{font-size:.78rem;color:#7a8494;margin-bottom:5px;margin-top:2px}
-.pen-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.btn-pen{background:#1a0d0d;color:#ff9966;font-size:.75rem;padding:8px;flex:1;min-width:72px}
-.btn-bon{background:#0a1a0a;color:#3ddc84;font-size:.75rem;padding:8px;flex:1;min-width:72px}
-
-.final-box{background:#0d1421;border-radius:14px;padding:14px;text-align:center;margin-bottom:10px}
-.final-lbl{font-size:.8rem;color:#7a8494}
-.final-sc{font-size:3.2rem;font-weight:800;color:#ffd740;line-height:1}
-.final-bk{font-size:.72rem;color:#5a6478;margin-top:4px}
-
-.btn-conf{background:linear-gradient(135deg,#3ddc84,#00b4d8);color:#000;width:100%;padding:14px;font-size:1rem;margin-bottom:8px}
-.btn-rem{background:#1e2535;color:#a0a8b4;width:100%;padding:12px;font-size:.9rem}
-
-/* seq log in s3 */
-.seq-log{font-size:.7rem;color:#7a8494;max-height:60px;overflow-y:auto;margin-top:4px}
-
-/* ── 화면4 순위 ── */
-#s4{padding:14px 12px}
-.rank-list{flex:1;overflow-y:auto}
-.ri{background:#111827;border-radius:14px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
-.ri-medal{font-size:1.7rem;min-width:38px;text-align:center}
-.ri-info{flex:1;min-width:0}
-.ri-name{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ri-pm{font-size:.7rem;color:#7a8494}
-.ri-det{font-size:.62rem;color:#4a5568;margin-top:2px;line-height:1.4}
-.ri-sc{font-size:1.6rem;font-weight:800;color:#ffd740;min-width:52px;text-align:right}
-.rank-btns{display:flex;gap:8px;margin-top:10px;flex-shrink:0}
-.btn-nx{background:linear-gradient(135deg,#e84393,#7b2fff);color:#fff;flex:1;padding:14px}
-.btn-rst{background:#1e2535;color:#a0a8b4;flex:1;padding:14px}
-
-/* ── 오버레이 ── */
-#calib-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;flex-direction:column;align-items:center;justify-content:center}
-#calib-ov.on{display:flex}
-.calib-n{font-size:5rem;font-weight:800;color:#ffd740;animation:pulse 1s infinite}
-.calib-m{font-size:1rem;color:#e8eaf0;margin-top:10px}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(.94)}}
-
-/* 불일치 토스트형 감점 제안 */
-#mismatch-ov{display:none;position:fixed;bottom:20%;left:50%;transform:translateX(-50%);background:#1e2535;border-radius:16px;padding:14px 18px;z-index:180;text-align:center;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.6)}
-#mismatch-ov.on{display:block}
-.mo-lbl{font-size:.78rem;color:#ff6b6b;margin-bottom:8px}
-.mo-btns{display:flex;gap:8px}
-.btn-ded1{background:#2a1010;color:#ff9966;flex:1;padding:9px;font-size:.8rem}
-.btn-ded3{background:#3a0f0f;color:#ff5252;flex:1;padding:9px;font-size:.8rem}
-.btn-skip{background:#1e2535;color:#7a8494;flex:1;padding:9px;font-size:.78rem}
-
-#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:9px 18px;border-radius:20px;font-size:.85rem;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
-#toast.on{opacity:1}
-
-#loading{position:fixed;inset:0;background:#080c10;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ld-logo{font-size:4rem;margin-bottom:16px}
-.ld-txt{font-size:.95rem;color:#7a8494}
-.ld-bar{width:200px;height:4px;background:#1e2535;border-radius:2px;margin-top:14px;overflow:hidden}
-.ld-fill{height:100%;background:linear-gradient(90deg,#7b2fff,#e84393);border-radius:2px;animation:ldf 3s ease-out forwards}
-@keyframes ldf{from{width:0}to{width:100%}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-height:100vh;}
+.wrap{display:flex;flex-direction:column;align-items:center;padding:14px;gap:12px;max-width:640px;margin:0 auto;}
+.title{font-family:'Black Han Sans',sans-serif;font-size:22px;letter-spacing:2px;background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.screen{width:100%;display:none;flex-direction:column;gap:12px;}
+.screen.active{display:flex;}
+.card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.card-title{font-family:'Black Han Sans',sans-serif;font-size:14px;color:rgba(255,255,255,0.55);letter-spacing:1px;}
+.name-input{padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:16px;width:100%;font-family:'Noto Sans KR',sans-serif;outline:none;}
+.name-input:focus{border-color:#818cf8;}
+.name-input::placeholder{color:rgba(255,255,255,0.3);}
+.btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:'Black Han Sans',sans-serif;font-size:15px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;}
+.btn-danger{background:linear-gradient(135deg,#be123c,#e11d48);color:#fff;}
+.btn-secondary{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.15);}
+.btn-gold{background:linear-gradient(135deg,#b45309,#d97706);color:#fff;}
+.btn-green{background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;}
+.btn-row{display:flex;gap:10px;}.btn-row .btn{flex:1;}
+.guide-steps{display:flex;flex-direction:column;gap:10px;}
+.guide-step{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);}
+.guide-icon{font-size:28px;flex-shrink:0;}
+.guide-text{display:flex;flex-direction:column;gap:2px;}
+.guide-title-t{font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;}
+.guide-desc{font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;}
+.camera-box{position:relative;width:100%;background:#000;border-radius:16px;overflow:hidden;border:2px solid #312e81;}
+#video{width:100%;height:auto;display:block;}
+#canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+.player-badge{position:absolute;top:10px;left:10px;z-index:10;background:rgba(0,0,0,0.75);border-radius:10px;padding:5px 12px;font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;border:1px solid rgba(99,102,241,0.5);}
+.detect-badge{position:absolute;top:10px;right:10px;z-index:10;padding:5px 12px;border-radius:10px;font-size:11px;background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;transition:all 0.3s;}
+.detect-badge.ok{background:rgba(74,222,128,0.3);border-color:#4ade80;color:#4ade80;}
+.detect-badge.frozen{background:rgba(251,191,36,0.3);border-color:#fbbf24;color:#fbbf24;}
+.kiai-badge{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);z-index:15;padding:8px 20px;border-radius:20px;background:rgba(251,191,36,0.9);color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;letter-spacing:2px;display:none;}
+.kick-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;padding:6px 16px;border-radius:20px;background:rgba(244,114,182,0.9);color:#fff;font-family:'Black Han Sans',sans-serif;font-size:13px;letter-spacing:1px;display:none;}
+#cam-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.93);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:100;padding:20px;gap:14px;}
+.loader{width:36px;height:36px;border:3px solid rgba(99,102,241,0.2);border-top-color:#818cf8;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.cam-txt{font-size:13px;color:#818cf8;line-height:1.8;}
+.cam-sub{font-size:11px;color:rgba(255,255,255,0.3);}
+#calibOverlay{position:absolute;inset:0;background:rgba(0,0,0,0.85);display:none;flex-direction:column;justify-content:center;align-items:center;z-index:50;gap:10px;}
+.calib-title{font-family:'Black Han Sans',sans-serif;font-size:18px;color:#fbbf24;letter-spacing:2px;}
+.calib-desc{font-size:13px;color:rgba(255,255,255,0.6);text-align:center;}
+.calib-count{font-family:'Black Han Sans',sans-serif;font-size:64px;color:#fff;}
+.calib-bar{width:200px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+.calib-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;transition:width 0.1s;}
+.freeze-bar{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:10px;padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:#fbbf24;}
+.freeze-bar-fill{flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+.freeze-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;transition:width 0.5s;}
+/* 100점 점수판 */
+.score-wrap{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.score-top{display:flex;justify-content:space-between;align-items:center;}
+.score-label{font-family:'Black Han Sans',sans-serif;font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:1px;}
+.score-total-wrap{display:flex;align-items:baseline;gap:4px;}
+.score-total{font-family:'Black Han Sans',sans-serif;font-size:42px;background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.score-maxlabel{font-size:14px;color:rgba(255,255,255,0.3);}
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.score-box{background:rgba(255,255,255,0.04);border-radius:10px;padding:8px 12px;}
+.score-box-label{font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;}
+.score-box-val{font-family:'Black Han Sans',sans-serif;font-size:20px;color:#c7d2fe;}
+.score-box-max{font-size:10px;color:rgba(255,255,255,0.25);}
+.kiai-row{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.kiai-label{font-size:11px;color:rgba(255,255,255,0.4);min-width:50px;}
+.kiai-bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;}
+.kiai-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b);width:0%;transition:width 0.1s;}
+.kiai-count{font-size:11px;color:#fbbf24;min-width:50px;text-align:right;}
+/* 조정 화면 */
+.adjust-header{background:rgba(99,102,241,0.1);border:1.5px solid rgba(99,102,241,0.4);border-radius:14px;padding:14px;text-align:center;display:flex;flex-direction:column;gap:4px;}
+.adjust-name{font-family:'Black Han Sans',sans-serif;font-size:15px;color:#c7d2fe;}
+.adjust-ai{font-family:'Black Han Sans',sans-serif;font-size:48px;background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.adjust-sub{font-size:11px;color:rgba(255,255,255,0.35);}
+.adjust-list{display:flex;flex-direction:column;gap:8px;}
+.adjust-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border-radius:12px;padding:10px 14px;border:1px solid rgba(255,255,255,0.08);}
+.adjust-item-label{flex:1;display:flex;flex-direction:column;gap:2px;}
+.adjust-item-name{font-size:12px;color:rgba(255,255,255,0.6);}
+.adjust-item-ai{font-size:11px;color:rgba(255,255,255,0.35);}
+.adjust-val{font-family:'Black Han Sans',sans-serif;font-size:20px;color:#a5b4fc;min-width:36px;text-align:center;}
+.adj-btn{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.adj-btn:active{transform:scale(0.85);}
+.adj-plus{background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);}
+.adj-minus{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4);}
+.deduct-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.deduct-btn{padding:12px 8px;border-radius:12px;border:1.5px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);color:#fca5a5;font-family:'Black Han Sans',sans-serif;font-size:11px;cursor:pointer;transition:all 0.2s;text-align:center;user-select:none;}
+.deduct-btn:active{transform:scale(0.95);}
+.deduct-btn.on{background:rgba(239,68,68,0.3);border-color:#ef4444;}
+.deduct-num{font-size:22px;font-weight:700;display:block;margin-bottom:2px;color:#f87171;}
+/* 감점/가산 아이템 */
+.judge-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.08);}
+.judge-label{flex:1;display:flex;flex-direction:column;gap:2px;}
+.judge-name{font-family:'Black Han Sans',sans-serif;font-size:12px;color:rgba(255,255,255,0.7);}
+.judge-pts{font-size:10px;color:rgba(255,255,255,0.35);}
+.judge-val{font-family:'Black Han Sans',sans-serif;font-size:18px;min-width:32px;text-align:center;}
+.judge-val.pos{color:#4ade80;}
+.judge-val.neg{color:#f87171;}
+.judge-val.zero{color:rgba(255,255,255,0.4);}
+.jbtn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.jbtn:active{transform:scale(0.85);}
+.jbtn-plus{background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);}
+.jbtn-minus{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4);}
+.final-summary{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.final-row{display:flex;justify-content:space-between;align-items:center;}
+.final-row-label{font-size:13px;color:rgba(255,255,255,0.5);}
+.final-row-val{font-family:'Black Han Sans',sans-serif;font-size:18px;}
+.final-total-row{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);}
+.final-total-label{font-family:'Black Han Sans',sans-serif;font-size:15px;color:rgba(255,255,255,0.7);}
+.final-total-val{font-family:'Black Han Sans',sans-serif;font-size:36px;color:#a5b4fc;}
+.rank-title{font-family:'Black Han Sans',sans-serif;font-size:20px;text-align:center;letter-spacing:2px;color:#fbbf24;padding:4px 0;}
+.rank-list{display:flex;flex-direction:column;gap:8px;width:100%;}
+.rank-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;}
+.rank-item.r1{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.4);}
+.rank-item.r2{background:rgba(148,163,184,0.1);border-color:rgba(148,163,184,0.3);}
+.rank-item.r3{background:rgba(180,83,9,0.1);border-color:rgba(180,83,9,0.3);}
+.rank-medal{font-size:24px;min-width:32px;}
+.rank-info{flex:1;}
+.rank-name{font-family:'Black Han Sans',sans-serif;font-size:15px;}
+.rank-detail{font-size:10px;color:rgba(255,255,255,0.38);margin-top:2px;line-height:1.6;}
+.rank-score{font-family:'Black Han Sans',sans-serif;font-size:26px;}
+.r1 .rank-score{color:#fbbf24;}.r2 .rank-score{color:#94a3b8;}.r3 .rank-score{color:#b45309;}
+.debug{font-size:10px;color:rgba(255,255,255,0.18);text-align:center;word-break:break-all;min-height:16px;}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="title">🥋 품새 AI 심판 v3</div>
+  <select id="poomsaeSelect" onchange="currentPoomsae=this.value"
+    style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.08);color:#fff;font-family:'Black Han Sans',sans-serif;
+    font-size:14px;margin-bottom:4px;outline:none;">
+    <option value="태극4장">태극 4장 ★ 학습완료</option>
+    <option value="태극5장">태극 5장</option>
+    <option value="태극6장">태극 6장</option>
+    <option value="태극7장">태극 7장</option>
+    <option value="태극8장">태극 8장</option>
+    <option value="고려">고려</option>
+    <option value="금강">금강</option>
+    <option value="태백">태백</option>
+  </select>
 
-<div id="loading">
-  <div class="ld-logo">🥋</div>
-  <div class="ld-txt">MediaPipe 로딩 중…</div>
-  <div class="ld-bar"><div class="ld-fill"></div></div>
-</div>
-<div id="toast"></div>
-<div id="calib-ov">
-  <div class="calib-n" id="calib-n">3</div>
-  <div class="calib-m">차렷 자세로 서 계세요</div>
-</div>
-<div id="mismatch-ov">
-  <div class="mo-lbl" id="mo-lbl">❌ 동작 불일치</div>
-  <div class="mo-btns">
-    <button class="btn-ded1" onclick="applyMismatch(-0.1)">경미 -0.1</button>
-    <button class="btn-ded3" onclick="applyMismatch(-0.3)">심각 -0.3</button>
-    <button class="btn-skip" onclick="closeMismatch()">무시</button>
-  </div>
-</div>
-
-<div class="scr" id="s1">
-  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:420px;margin:0 auto;width:100%;padding:24px 20px">
-    <div class="logo">🥋</div>
-    <h1>품새 AI 심판</h1>
-    <p class="sub">선수 정보를 입력하세요</p>
-    <div style="height:20px"></div>
+  <!-- 화면1: 이름 입력 -->
+  <div class="screen active" id="s1">
     <div class="card">
-      <label style="font-size:.75rem;color:#7a8494;display:block;margin-bottom:5px">선수 이름</label>
-      <input id="inp-name" type="text" placeholder="이름 입력" maxlength="20">
-      <label style="font-size:.75rem;color:#7a8494;display:block;margin-bottom:5px">품새 선택</label>
-      <select id="sel-poom">
-        <option value="태극4장">태극 4장</option>
-        <option value="태극5장">태극 5장</option>
-        <option value="태극6장">태극 6장</option>
-        <option value="태극7장">태극 7장</option>
-        <option value="태극8장">태극 8장</option>
-        <option value="고려">고려</option>
-        <option value="금강">금강</option>
-        <option value="태백">태백</option>
-      </select>
+      <div class="card-title">선수 이름</div>
+      <input class="name-input" id="nameInput" type="text" placeholder="이름 입력" maxlength="10" onkeydown="if(event.key==='Enter')goGuide()">
+      <button class="btn btn-primary" onclick="goGuide()">다음 →</button>
     </div>
-    <button class="btn-main" onclick="goMeasure()">📷 촬영 시작</button>
-    <div class="rank-hint" id="rank-hint"></div>
+    <button class="btn btn-gold" id="showRankBtn" style="display:none" onclick="goRank()">🏆 전체 순위 보기</button>
+    <div class="debug" id="dbg">준비 중...</div>
+  </div>
+
+  <!-- 화면2: 촬영 가이드 -->
+  <div class="screen" id="s2">
+    <div class="card">
+      <div class="card-title">촬영 전 확인사항</div>
+      <div class="guide-steps">
+        <div class="guide-step"><div class="guide-icon">📐</div><div class="guide-text"><div class="guide-title-t">3시 또는 9시 측면 촬영</div><div class="guide-desc">선수 정측면에서 촬영. 무릎/팔 각도, 발차기 높이가 2배 정확해요.</div></div></div>
+        <div class="guide-step"><div class="guide-icon">📏</div><div class="guide-text"><div class="guide-title-t">거리: 2~2.5m (전신 다 보이게)</div><div class="guide-desc">바닥에 테이프로 거리 표시 권장. 너무 가까우면 발이 잘립니다.</div></div></div>
+        <div class="guide-step"><div class="guide-icon">💡</div><div class="guide-text"><div class="guide-title-t">밝은 곳 / 역광 금지</div><div class="guide-desc">선수 앞쪽에서 빛이 와야 인식률이 높아요.</div></div></div>
+        <div class="guide-step"><div class="guide-icon">🎤</div><div class="guide-text"><div class="guide-title-t">마이크 권한 허용 (기합 감지)</div><div class="guide-desc">기합 1회당 +1점, 최대 +5점 가산됩니다.</div></div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="startMeasure()">📷 카메라 시작</button>
+    <button class="btn btn-secondary" onclick="showScreen('s1')">← 뒤로</button>
+  </div>
+
+  <!-- 화면3: 측정 -->
+  <div class="screen" id="s3">
+    <div class="camera-box">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="player-badge" id="playerBadge">선수</div>
+      <div class="detect-badge" id="detectBadge">인식 대기</div>
+      <div class="kiai-badge" id="kiaiBadge">⚡ 기합!</div>
+      <div class="kick-badge" id="kickBadge">🦵 발차기!</div>
+      <div id="lockOverlay" style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;z-index:20;">
+        <button onclick="lockPerson()" style="padding:10px 28px;border-radius:50px;background:rgba(251,191,36,0.92);border:none;color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;animation:pulse 1s ease-in-out infinite;">📌 이 선수 고정</button>
+      </div>
+      <div id="calibOverlay">
+        <div class="calib-title">🧍 체형 보정 중</div>
+        <div class="calib-desc">차렷 자세로 가만히 서주세요</div>
+        <div class="calib-count" id="calibCount">3</div>
+        <div class="calib-bar"><div class="calib-fill" id="calibFill" style="width:0%"></div></div>
+      </div>
+      <div id="cam-overlay">
+        <div class="loader"></div>
+        <div class="cam-txt" id="camTxt">AI 엔진 로딩 중...</div>
+        <div class="cam-sub" id="camSub">MediaPipe 모델 준비 중</div>
+      </div>
+    </div>
+
+    <!-- 동결 진행 바 -->
+    <div class="freeze-bar" id="freezeBar" style="display:none">
+      <span>⏱ 채점 보호</span>
+      <div class="freeze-bar-fill"><div class="freeze-fill" id="freezeFill" style="width:0%"></div></div>
+      <span id="freezeLabel">0초</span>
+    </div>
+
+    <div class="btn-row" id="measureBtns" style="display:none">
+      <button class="btn btn-green" id="calibBtn" onclick="startCalib()">🧍 체형 보정</button>
+      <button class="btn btn-primary" id="startBtn" onclick="startScoring()" style="display:none">▶ 채점 시작</button>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopMeasure()" style="display:none">🛑 종료</button>
+    </div>
+
+    <div class="score-wrap">
+      <div class="score-top">
+        <div class="score-label" id="scoringLabel">선수 고정 → 체형 보정 → 채점 시작</div>
+        <div class="score-total-wrap">
+          <div class="score-total" id="liveTotal">-</div>
+          <div class="score-maxlabel">/100</div>
+        </div>
+      </div>
+      <div class="kiai-row">
+        <span class="kiai-label">🎤 기합</span>
+        <div class="kiai-bar"><div class="kiai-fill" id="kiaiFill"></div></div>
+        <span class="kiai-count" id="kiaiCount">0회 (+0점)</span>
+      </div>
+      <div class="score-grid">
+        <div class="score-box"><div class="score-box-label">정확성 — 서기</div><div class="score-box-val" id="sStance">-</div><div class="score-box-max">/ 20점</div></div>
+        <div class="score-box"><div class="score-box-label">정확성 — 손기술</div><div class="score-box-val" id="sArm">-</div><div class="score-box-max">/ 20점</div></div>
+        <div class="score-box"><div class="score-box-label">정확성 — 자세</div><div class="score-box-val" id="sPosture">-</div><div class="score-box-max">/ 20점</div></div>
+        <div class="score-box"><div class="score-box-label">표현력 — 절도+발차기</div><div class="score-box-val" id="sPower">-</div><div class="score-box-max">/ 20점</div></div>
+        <div class="score-box"><div class="score-box-label">표현력 — 균형</div><div class="score-box-val" id="sBalance">-</div><div class="score-box-max">/ 10점</div></div>
+        <div class="score-box"><div class="score-box-label">표현력 — 리듬</div><div class="score-box-val" id="sRhythm">-</div><div class="score-box-max">/ 10점</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 화면4: 채점 조정 -->
+  <div class="screen" id="s4">
+    <div class="adjust-header">
+      <div class="adjust-name" id="adjName"></div>
+      <div class="adjust-ai" id="adjAI">0</div>
+      <div class="adjust-sub" id="adjSub">AI 측정 점수 / 100점 만점</div>
+    </div>
+    <div class="card">
+      <div class="card-title">항목별 조정 (+ 가점 / − 감점, 1점 단위)</div>
+      <div class="adjust-list" id="adjustList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">감점 / 가산점 (− 감점 | + 가산)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="judgeItems"></div>
+    </div>
+    <div class="final-summary">
+      <div class="final-row"><span class="final-row-label">AI 측정</span><span class="final-row-val" id="sumAI" style="color:#a5b4fc">0</span></div>
+      <div class="final-row"><span class="final-row-label">사범 조정</span><span class="final-row-val" id="sumAdj" style="color:#4ade80">+0</span></div>
+      <div class="final-row"><span class="final-row-label">감점/가산 합계</span><span class="final-row-val" id="sumDeduct" style="color:#f87171">0</span></div>
+      <div class="final-total-row"><span class="final-total-label">최종 점수</span><span class="final-total-val" id="sumFinal">0</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="remeasure()">🔄 재측정</button>
+      <button class="btn btn-primary" onclick="confirmScore()">✅ 점수 확정</button>
+    </div>
+  </div>
+
+  <!-- 화면5: 순위 -->
+  <div class="screen" id="s5">
+    <div class="rank-title">🏆 최종 순위</div>
+    <div class="rank-list" id="rankList"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goInput()">➕ 다음 선수</button>
+      <button class="btn btn-secondary" onclick="resetAll()">🔄 전체 초기화</button>
+    </div>
   </div>
 </div>
 
-<div class="scr" id="s2">
-  <div class="cam-wrap" id="cam-wrap">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
-    <div class="hud-tl">
-      <span class="badge" id="mp-badge">⏳ 초기화</span>
-      <span class="badge" id="dir-badge">정면</span>
-    </div>
-    <div class="hud-tr">
-      <span class="badge y" id="frozen-badge" style="display:none">❄️ 동결</span>
-    </div>
-    <div class="seq-hud">
-      <div class="seq-hud-step" id="sh-step">동작 1 / 25</div>
-      <div class="seq-hud-desc" id="sh-desc">아래막기</div>
-      <div class="seq-hud-match" id="sh-match"></div>
-    </div>
-  </div>
-
-  <div class="score-panel">
-    <div class="sg">
-      <div class="si"><span class="sl">서기</span><span class="sv" id="sc-st">-</span></div>
-      <div class="si"><span class="sl">손기술</span><span class="sv" id="sc-ar">-</span></div>
-      <div class="si"><span class="sl">자세</span><span class="sv" id="sc-po">-</span></div>
-      <div class="si"><span class="sl">절도</span><span class="sv" id="sc-pw">-</span></div>
-      <div class="si"><span class="sl">균형</span><span class="sv" id="sc-ba">-</span></div>
-      <div class="si"><span class="sl">리듬</span><span class="sv" id="sc-rh">-</span></div>
-    </div>
-    <div class="total-row">
-      <span style="font-size:.82rem;color:#7a8494">총점</span>
-      <span class="total-n" id="sc-tot">-</span>
-      <span style="font-size:.75rem;color:#7a8494">/ 100</span>
-    </div>
-  </div>
-
-  <div style="padding:0 12px">
-    <div class="fbar-wrap"><div class="fbar-fill" id="fbar" style="width:0"></div></div>
-    <div class="fbar-lbl" id="fbar-lbl">채점 시작 후 10초 보호 구간</div>
-  </div>
-
-  <div class="kiai-row">
-    <span style="font-size:.75rem;color:#7a8494">기합</span>
-    <div class="kiai-bar-w"><div class="kiai-bar" id="kiai-bar" style="width:0"></div></div>
-    <span class="kiai-lbl" id="kiai-lbl">0회 +0.0</span>
-  </div>
-
-  <div class="seq-detail">
-    <div class="seq-det-top">
-      <span class="seq-det-step" id="sd-step">동작 1 / 25</span>
-      <span class="seq-det-ded" id="sd-ded">감점 0.0</span>
-    </div>
-    <div class="seq-det-exp" id="sd-exp" style="color:#ffd740;font-weight:700">아래막기</div>
-    <div class="seq-nav">
-      <button class="btn-seq" onclick="seqGo(-1)">← 이전</button>
-      <button class="btn-ov"  onclick="undoLastDed()">감점취소</button>
-      <button class="btn-seq" onclick="seqGo(+1)">다음 →</button>
-    </div>
-  </div>
-
-  <div class="ctrl">
-    <button class="btn-cal" onclick="doCalib()">🧍 보정</button>
-    <button class="btn-go" id="btn-go" onclick="startScore()">▶ 시작</button>
-    <button class="btn-stp" onclick="stopScore()">🛑 종료</button>
-  </div>
-</div>
-
-<div class="scr" id="s3" style="overflow-y:auto">
-  <h2>📊 채점 조정</h2>
-  <div class="adj-grid" id="adj-grid"></div>
-
-  <div class="card" style="margin-bottom:8px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:.82rem;font-weight:700">시퀀스 감점</span>
-      <span id="s3-seq-tot" style="color:#ff6b6b;font-weight:700">0.0점</span>
-    </div>
-    <div class="seq-log" id="s3-seq-log">없음</div>
-  </div>
-
-  <div class="sec-lbl">공식 감점</div>
-  <div class="pen-row">
-    <button class="btn-pen" onclick="applyOff(-0.1)">경미<br>-0.1</button>
-    <button class="btn-pen" onclick="applyOff(-0.3)">심각<br>-0.3</button>
-    <button class="btn-pen" onclick="applyOff(-0.3)">경계이탈<br>-0.3</button>
-  </div>
-  <div class="sec-lbl">가산점</div>
-  <div class="pen-row">
-    <button class="btn-bon" onclick="applyOff(1)">절도우수<br>+1</button>
-    <button class="btn-bon" onclick="applyOff(2)">자세우수<br>+2</button>
-    <button class="btn-bon" onclick="applyOff(3)">기합<br>+3</button>
-    <button class="btn-bon" onclick="applyOff(5)">완벽<br>+5</button>
-  </div>
-  <div class="final-box">
-    <div class="final-lbl">최종 점수</div>
-    <div class="final-sc" id="f-sc">0.0</div>
-    <div class="final-bk" id="f-bk"></div>
-  </div>
-  <button class="btn-conf" onclick="confirmScore()">✅ 점수 확정</button>
-  <button class="btn-rem"  onclick="remeasure()">🔄 재측정</button>
-  <div style="height:20px"></div>
-</div>
-
-<div class="scr" id="s4" style="overflow-y:auto">
-  <h2>🏆 전체 순위</h2>
-  <div class="rank-list" id="rank-list"></div>
-  <div class="rank-btns">
-    <button class="btn-nx"  onclick="nextPlayer()">➕ 다음 선수</button>
-    <button class="btn-rst" onclick="resetAll()">🔄 초기화</button>
-  </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <script>
-// ══════════════════════════════════════════
-//  품새 DB (사범님 검증)
-// ══════════════════════════════════════════
-const DB={
-  '태극4장':[
-    {t:'KN2',h:'M',s:'B',desc:'왼 뒷굽이 쌍손날몸통막기'},
-    {t:'THR',h:'M',s:'F',desc:'오른 앞굽이 편손끝세워찌르기'},
-    {t:'KN2',h:'M',s:'B',desc:'오른 뒷굽이 쌍손날몸통막기'},
-    {t:'THR',h:'M',s:'F',desc:'왼 앞굽이 편손끝세워찌르기'},
-    {t:'ST',h:'H',s:'F',desc:'왼 앞굽이 제비품목치기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통바로지르기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 옆차기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 옆차기'},
-    {t:'KN2',h:'M',s:'B',desc:'오른 뒷굽이 쌍손날몸통막기'},
-    {t:'BL',h:'M',s:'B',desc:'오른 뒷굽이 몸통바깥막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'오른 뒷굽이 몸통안막기'},
-    {t:'BL',h:'M',s:'B',desc:'왼 뒷굽이 몸통바깥막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'왼 뒷굽이 몸통안막기'},
-    {t:'ST',h:'H',s:'F',desc:'왼 앞굽이 제비품목치기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'ST',h:'H',s:'F',desc:'오른 앞굽이 등주먹얼굴앞치기'},
-    {t:'BL',h:'M',s:'W',desc:'왼 앞서기 몸통안막기'},
-    {t:'PU',h:'M',s:'W',desc:'오른 앞서기 몸통지르기'},
-    {t:'BL',h:'M',s:'W',desc:'오른 앞서기 몸통안막기'},
-    {t:'PU',h:'M',s:'W',desc:'왼 앞서기 몸통지르기'},
-    {t:'BL',h:'M',s:'F',desc:'왼 앞굽이 몸통안막기'},
-    {t:'PU2',h:'M',s:'F',desc:'몸통두번지르기 ★기합',kihap:true},
-  ],
-  '태극5장':[
-    {t:'BL',h:'L',s:'F',desc:'왼 앞굽이 아래막기'},
-    {t:'ST',h:'M',s:'-',desc:'왼서기 메주먹내려치기'},
-    {t:'BL',h:'L',s:'F',desc:'오른 앞굽이 아래막기'},
-    {t:'ST',h:'M',s:'-',desc:'오른서기 메주먹내려치기'},
-    {t:'BL',h:'M',s:'F',desc:'왼 앞굽이 몸통안막기'},
-    {t:'BL',h:'M',s:'F',desc:'오른 앞굽이 몸통안막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'ST',h:'H',s:'F',desc:'오른 앞굽이 등주먹얼굴앞치기'},
-    {t:'BL',h:'M',s:'F',desc:'왼 몸통안막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'ST',h:'H',s:'F',desc:'왼 앞굽이 등주먹얼굴앞치기'},
-    {t:'BL',h:'M',s:'F',desc:'오른 몸통안막기'},
-    {t:'ST',h:'H',s:'F',desc:'오른 앞굽이 등주먹얼굴앞치기'},
-    {t:'KN',h:'M',s:'B',desc:'왼 뒷굽이 한손날몸통바깥막기'},
-    {t:'ST',h:'M',s:'F',desc:'오른 앞굽이 팔굽돌려치기'},
-    {t:'KN',h:'M',s:'B',desc:'오른 뒷굽이 한손날몸통바깥막기'},
-    {t:'ST',h:'M',s:'F',desc:'왼 앞굽이 팔굽돌려치기'},
-    {t:'BL',h:'L',s:'F',desc:'왼 앞굽이 아래막기'},
-    {t:'BL',h:'M',s:'F',desc:'몸통안막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'BL',h:'L',s:'F',desc:'오른 앞굽이 아래막기'},
-    {t:'BL',h:'M',s:'F',desc:'몸통안막기'},
-    {t:'BL',h:'H',s:'F',desc:'왼 앞굽이 얼굴막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 옆차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기'},
-    {t:'BL',h:'H',s:'F',desc:'오른 앞굽이 얼굴막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 옆차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기 ★기합',kihap:true},
-  ],
-  '태극6장':[
-    {t:'BL',h:'L',s:'F',desc:'왼 앞굽이 아래막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'왼 뒷굽이 몸통바깥막기'},
-    {t:'BL',h:'L',s:'F',desc:'오른 앞굽이 아래막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'오른 뒷굽이 몸통바깥막기'},
-    {t:'KN',h:'H',s:'F',desc:'왼 앞굽이 한손날얼굴비틀어막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 돌려차기'},
-    {t:'BL',h:'M',s:'F',desc:'왼 앞굽이 몸통바깥막기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통바로지르기'},
-    {t:'BL',h:'M',s:'F',desc:'오른 앞굽이 몸통바깥막기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'PU',h:'M',s:'F',desc:'왼 앞굽이 몸통바로지르기'},
-    {t:'BL2',h:'L',s:'-',desc:'나란히서기 아래헤쳐막기(천천히)'},
-    {t:'KN',h:'H',s:'F',desc:'오른 앞굽이 한손날얼굴비틀어막기'},
-    {t:'KI',h:'H',s:'-',desc:'왼발 돌려차기 ★기합',kihap:true},
-    {t:'BL',h:'L',s:'F',desc:'오른 앞굽이 아래막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'오른 뒷굽이 몸통바깥막기'},
-    {t:'BL',h:'L',s:'F',desc:'왼 앞굽이 아래막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'BL',h:'M',s:'B',desc:'왼 뒷굽이 몸통바깥막기'},
-    {t:'KN2',h:'M',s:'B',desc:'왼 뒷굽이 쌍손날몸통막기'},
-    {t:'KN2',h:'M',s:'B',desc:'오른 뒷굽이 쌍손날몸통막기'},
-    {t:'PB',h:'M',s:'F',desc:'왼 앞굽이 바탕손몸통막기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-  ],
-  '태극7장':[
-    {t:'PB',h:'M',s:'C',desc:'왼 범서기 바탕손몸통안막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'PB',h:'M',s:'C',desc:'왼 범서기 바탕손몸통안막기(제자리)'},
-    {t:'PB',h:'M',s:'C',desc:'오른 범서기 바탕손몸통안막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'PB',h:'M',s:'C',desc:'오른 범서기 바탕손몸통안막기(제자리)'},
-    {t:'KN2',h:'L',s:'B',desc:'왼 뒷굽이 손날아래막기'},
-    {t:'KN2',h:'L',s:'B',desc:'오른 뒷굽이 손날아래막기'},
-    {t:'PB',h:'M',s:'C',desc:'왼 범서기 바탕손거들어몸통안막기'},
-    {t:'PB',h:'M',s:'C',desc:'오른 범서기 바탕손거들어몸통안막기'},
-    {t:'ST',h:'M',s:'-',desc:'모아서기 보주먹(5초)'},
-    {t:'BL2',h:'M',s:'F',desc:'왼 앞굽이 가위막기'},
-    {t:'BL2',h:'M',s:'F',desc:'오른 앞굽이 가위막기'},
-    {t:'BL2',h:'M',s:'F',desc:'왼 앞굽이 몸통헤쳐막기'},
-    {t:'ST',h:'M',s:'-',desc:'오른 무릎치기'},
-    {t:'PU2',h:'M',s:'K',desc:'오른 앞꼬아서기 두주먹젖혀지르기'},
-    {t:'BL2',h:'L',s:'F',desc:'엇걸어아래막기'},
-    {t:'BL2',h:'M',s:'F',desc:'오른 앞굽이 몸통헤쳐막기'},
-    {t:'ST',h:'M',s:'-',desc:'왼 무릎치기'},
-    {t:'PU2',h:'M',s:'K',desc:'왼 앞꼬아서기 두주먹젖혀지르기'},
-    {t:'ST',h:'H',s:'-',desc:'왼서기 등주먹얼굴바깥치기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 표적차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기'},
-    {t:'ST',h:'H',s:'-',desc:'오른서기 등주먹얼굴바깥치기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 표적차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기'},
-    {t:'KN',h:'M',s:'B',desc:'왼 뒷굽이 한손날몸통옆막기'},
-    {t:'PU',h:'M',s:'J',desc:'주춤서기 몸통옆지르기 ★기합',kihap:true},
-  ],
-  '태극8장':[
-    {t:'BL2',h:'M',s:'B',desc:'왼 뒷굽이 거들어몸통바깥막기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통바로지르기'},
-    {t:'KI2',h:'H',s:'-',desc:'두발당상차기 ★기합',kihap:true},
-    {t:'BL',h:'M',s:'F',desc:'왼 앞굽이 몸통안막기'},
-    {t:'PU2',h:'M',s:'F',desc:'몸통두번지르기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통반대지르기'},
-    {t:'BL2',h:'H',s:'F',desc:'왼 앞굽이 외산틀막기'},
-    {t:'PU',h:'H',s:'F',desc:'당겨턱지르기'},
-    {t:'BL2',h:'H',s:'F',desc:'오른 앞굽이 외산틀막기'},
-    {t:'PU',h:'H',s:'F',desc:'당겨턱지르기'},
-    {t:'KN2',h:'M',s:'B',desc:'왼 뒷굽이 쌍손날몸통막기'},
-    {t:'THR',h:'M',s:'F',desc:'오른 앞굽이 편손끝세워찌르기'},
-    {t:'ST2',h:'H',s:'J',desc:'등주먹→주춤서기 팔굽돌려치기'},
-    {t:'KN2',h:'M',s:'B',desc:'오른 뒷굽이 쌍손날몸통막기'},
-    {t:'THR',h:'M',s:'F',desc:'왼 앞굽이 편손끝세워찌르기'},
-    {t:'ST2',h:'H',s:'J',desc:'등주먹→주춤서기 팔굽돌려치기'},
-    {t:'BL2',h:'L',s:'B',desc:'왼 뒷굽이 거들어아래막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'KI2',h:'H',s:'F',desc:'뛰어앞차기 ★기합',kihap:true},
-    {t:'BL',h:'M',s:'F',desc:'왼 앞굽이 몸통안막기'},
-    {t:'PU2',h:'M',s:'F',desc:'몸통두번지르기'},
-    {t:'KN',h:'M',s:'B',desc:'왼 뒷굽이 한손날몸통바깥막기'},
-    {t:'ST2',h:'M',s:'F',desc:'팔굽돌려치기→등주먹→몸통지르기'},
-    {t:'KN',h:'M',s:'B',desc:'오른 뒷굽이 한손날몸통바깥막기'},
-    {t:'ST2',h:'M',s:'F',desc:'팔굽돌려치기→등주먹→몸통지르기'},
-  ],
-  '고려':[
-    {t:'ST',h:'M',s:'-',desc:'통밀기 준비서기(5초)'},
-    {t:'KN2',h:'M',s:'B',desc:'왼 뒷굽이 쌍손날몸통막기'},
-    {t:'KI2',h:'M',s:'-',desc:'오른발 거듭옆차기'},
-    {t:'KN',h:'M',s:'F',desc:'오른 앞굽이 엎은손날바깥치기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'BL',h:'M',s:'B',desc:'왼 뒷굽이 몸통안막기'},
-    {t:'KN2',h:'M',s:'B',desc:'오른 뒷굽이 쌍손날몸통막기'},
-    {t:'KI2',h:'M',s:'-',desc:'왼발 거듭옆차기'},
-    {t:'KN',h:'M',s:'F',desc:'왼 앞굽이 엎은손날바깥치기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'BL',h:'M',s:'B',desc:'오른 뒷굽이 몸통안막기'},
-    {t:'KN',h:'H',s:'F',desc:'왼 앞굽이 한손날아래막기'},
-    {t:'ST',h:'H',s:'F',desc:'칼재비'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'ST',h:'L',s:'F',desc:'오른 앞굽이 무릎눌러꺾기'},
-    {t:'KN',h:'H',s:'F',desc:'오른 앞굽이 한손날아래막기'},
-    {t:'ST',h:'H',s:'F',desc:'칼재비'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'ST',h:'L',s:'F',desc:'왼 앞굽이 무릎눌러꺾기'},
-    {t:'KN',h:'H',s:'F',desc:'왼 앞굽이 한손날아래막기'},
-    {t:'ST',h:'H',s:'F',desc:'칼재비 ★기합',kihap:true},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'THR',h:'H',s:'F',desc:'편손끝아래제쳐찌르기'},
-    {t:'BL2',h:'M',s:'F',desc:'안팔목헤쳐막기'},
-    {t:'BL2',h:'M',s:'F',desc:'안팔목헤쳐막기'},
-    {t:'BL2',h:'M',s:'F',desc:'안팔목헤쳐막기'},
-    {t:'PU',h:'M',s:'F',desc:'주먹표적지르기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽옆치기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽옆치기'},
-    {t:'ST',h:'L',s:'-',desc:'모아서기 메주먹아래표적치기'},
-    {t:'KN',h:'H',s:'F',desc:'왼 앞굽이 한손날아래막기'},
-    {t:'ST',h:'H',s:'F',desc:'칼재비'},
-    {t:'KN',h:'H',s:'F',desc:'오른 앞굽이 한손날아래막기'},
-    {t:'ST',h:'H',s:'F',desc:'칼재비 ★기합',kihap:true},
-  ],
-  '금강':[
-    {t:'PB',h:'H',s:'F',desc:'오른 앞굽이 바탕손턱치기'},
-    {t:'PB',h:'H',s:'F',desc:'왼 앞굽이 바탕손턱치기'},
-    {t:'PB',h:'H',s:'F',desc:'오른 앞굽이 바탕손턱치기'},
-    {t:'KN',h:'M',s:'B',desc:'왼 뒷굽이 한손날몸통안막기'},
-    {t:'KN',h:'M',s:'B',desc:'오른 뒷굽이 한손날몸통안막기'},
-    {t:'KN',h:'M',s:'B',desc:'왼 뒷굽이 한손날몸통안막기'},
-    {t:'BL2',h:'L',s:'H',desc:'오른 학다리서기 금강막기(5초)'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 큰돌쩌귀'},
-    {t:'BL2',h:'H',s:'J',desc:'주춤서기 산틀막기 ★기합',kihap:true},
-    {t:'PU',h:'M',s:'J',desc:'주춤서기 몸통옆지르기'},
-    {t:'BL2',h:'H',s:'J',desc:'주춤서기 산틀막기'},
-    {t:'PU',h:'M',s:'J',desc:'주춤서기 몸통옆지르기'},
-    {t:'BL2',h:'L',s:'H',desc:'왼 학다리서기 금강막기(5초)'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 큰돌쩌귀'},
-    {t:'BL2',h:'H',s:'J',desc:'주춤서기 산틀막기 ★기합',kihap:true},
-    {t:'PU',h:'M',s:'J',desc:'주춤서기 몸통옆지르기'},
-    {t:'BL2',h:'H',s:'J',desc:'주춤서기 산틀막기'},
-    {t:'PU',h:'M',s:'J',desc:'주춤서기 몸통옆지르기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 아래표적치기'},
-    {t:'PU',h:'M',s:'F',desc:'왼 앞굽이 몸통바로지르기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 아래표적치기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통바로지르기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 아래표적치기'},
-    {t:'PU',h:'M',s:'F',desc:'왼 앞굽이 몸통바로지르기'},
-  ],
-  '태백':[
-    {t:'KN2',h:'L',s:'C',desc:'왼 범서기 손날아래헤쳐막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'PU2',h:'M',s:'F',desc:'오른 앞굽이 몸통두번지르기'},
-    {t:'KN2',h:'L',s:'C',desc:'오른 범서기 손날아래헤쳐막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'PU2',h:'M',s:'F',desc:'왼 앞굽이 몸통두번지르기'},
-    {t:'ST',h:'H',s:'F',desc:'왼 앞굽이 제비품목치기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 주먹지르기'},
-    {t:'ST',h:'H',s:'F',desc:'오른 앞굽이 젖혀틀어잡아끌기'},
-    {t:'KN',h:'M',s:'F',desc:'왼 앞굽이 손날엎어잡기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통반대지르기'},
-    {t:'PU',h:'M',s:'F',desc:'오른 앞굽이 몸통바로지르기 ★기합',kihap:true},
-    {t:'BL2',h:'M',s:'B',desc:'왼 뒷굽이 금강몸통막기'},
-    {t:'PU',h:'H',s:'F',desc:'당겨턱지르기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 옆차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기'},
-    {t:'BL2',h:'M',s:'B',desc:'오른 뒷굽이 금강몸통막기'},
-    {t:'PU',h:'H',s:'F',desc:'당겨턱지르기'},
-    {t:'PU',h:'M',s:'F',desc:'몸통바로지르기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 옆차기'},
-    {t:'ST',h:'M',s:'J',desc:'주춤서기 팔굽표적치기'},
-    {t:'KN2',h:'M',s:'B',desc:'왼 뒷굽이 쌍손날몸통막기'},
-    {t:'THR',h:'M',s:'F',desc:'오른 앞굽이 편손끝세워찌르기'},
-    {t:'ST',h:'H',s:'F',desc:'등주먹얼굴바깥치기'},
-    {t:'BL2',h:'M',s:'F',desc:'오른 앞굽이 가위막기'},
-    {t:'KI',h:'M',s:'-',desc:'오른발 앞차기'},
-    {t:'PU2',h:'M',s:'F',desc:'오른 앞굽이 몸통두번지르기'},
-    {t:'BL2',h:'M',s:'F',desc:'왼 앞굽이 가위막기'},
-    {t:'KI',h:'M',s:'-',desc:'왼발 앞차기'},
-    {t:'PU2',h:'M',s:'F',desc:'왼 앞굽이 몸통두번지르기 ★기합',kihap:true},
-  ],
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+
+// ── 태극4장 학습 데이터 (3개 영상 학습)
+const REFERENCE_ANGLES = {
+  '태극4장': {
+    left_knee:      {mean:149.89, std:15.0, min:134.48, max:164.26},
+    right_knee:     {mean:150.25, std:15.0, min:129.64, max:170.12},
+    left_elbow:     {mean:128.96, std:18.0, min:114.7,  max:137.74},
+    right_elbow:    {mean:137.33, std:18.0, min:131.96, max:140.31},
+    shoulder_tilt:  {mean:0.03,   std:0.02, min:0.02,   max:0.03},
+    hip_tilt:       {mean:0.04,   std:0.03, min:0.02,   max:0.09},
+    spine_lean:     {mean:0.03,   std:0.02, min:0.01,   max:0.05},
+  }
+  // 나머지 품새는 학습 후 추가 예정
 };
 
-// ══════════════════════════════════════════
-//  전역 상태
-// ══════════════════════════════════════════
-let holistic=null,camStream=null,animId=null;
-let playerName='',poomName='',poomSeq=[];
-let step=0;
-let seqDeds=[];           // {step,desc,amount}
-let calibData=null;
-let scoring=false,isFrozen=false,frozenSc=null;
-let scoreStart=0,stillFrames=0;
+let currentPoomsae = '태극4장'; // 현재 선택된 품새
 
-// 스무딩
-let sm={st:0,ar:0,po:0,pw:0,ba:0,rh:0};
-let pk={st:0,ar:0,po:0,pw:0,ba:0,rh:0};
+let poseInst=null,isRunning=false,isScoring=false,isLocked=false,isCalibrating=false,isCalibDone=false,currentName='';
 
-// 기술 이력 (버그2)
-const TMAX=20;
-let techHist=[];
+// 체형 기준
+let bodyRef={shoulderW:0.18,armLen:0.25,legLen:0.4,torsoH:0.3,hipY:0.5,shoulderY:0.3,calibrated:false};
 
-// 각속도 상태머신
-let techPhase='idle',phFrames=0;
-const MOVE_T=3.5,SETTLE_T=1.5,MIN_MV=4,MIN_ST=8;
-let avHist=[],prevAngles=null;
+// 각도 이력 (10프레임)
+const HIST=10;
+let aH={lKnee:[],rKnee:[],lElbow:[],rElbow:[]};
+let prevAng={lKnee:135,rKnee:135,lElbow:160,rElbow:160};
 
-// 이전 포즈
-let prevLM=null;
-let rhythmHist=[];
+// 점수 누적
+let sA={stance:[],arm:[],posture:[],power:[],balance:[],rhythm:[]};
+// 동결용 피크 점수
+let peakScore={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
+let lastScore={stance:16,arm:16,posture:16,power:14,balance:8,rhythm:8};
+let isFrozen=false,scoringStartTime=null,frozenAt=null;
+let prevLM=null,motionHist=[],frameSince=0;
+
+// 발차기
+let kickDetected=false,kickCooldown=false,kickHeight=0;
+let maxKickHeight=0; // 측정 중 최대 발차기 높이
 
 // 기합
-let kiaiCnt=0,kiaiSc=0,micAna=null,volHist=[],lastKiai=0;
+let kiaiCount=0,audioCtx=null,analyser=null,micStream=null,kiaiCooldown=false,kiaiVolHist=[];
 
-// 화면3 상태
-let adjDelta={st:0,ar:0,po:0,pw:0,ba:0,rh:0};
-let offAdj=0; // 공식 감점/가산 합계
+// 점수 저장
+let aiScoreData={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0,kiai:0,total:0};
+let adjustments={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
+let deductCounts=[0,0,0,0]; // legacy
+// 감점/가산 시스템
+const JUDGE_ITEMS=[
+  {id:'j0', name:'절도',   minus:-1, plus:+1, minusLabel:'절도 미숙 -1점', plusLabel:'절도 우수 +1점'},
+  {id:'j1', name:'자세',   minus:-2, plus:+2, minusLabel:'자세 미숙 -2점', plusLabel:'자세 우수 +2점'},
+  {id:'j2', name:'기합',   minus:-3, plus:+3, minusLabel:'기합 감점 -3점', plusLabel:'기합 가산 +3점'},
+  {id:'j3', name:'동작',   minus:-5, plus:+5, minusLabel:'동작 틀림 -5점', plusLabel:'동작 완벽 +5점'},
+];
+let judgeScores={j0:0,j1:0,j2:0,j3:0};
+let players=[];
 
-// 순위
-let rankings=[];
+const ITEMS=[
+  {key:'stance', label:'정확성 — 서기',       max:20},
+  {key:'arm',    label:'정확성 — 손기술',     max:20},
+  {key:'posture',label:'정확성 — 자세',       max:20},
+  {key:'power',  label:'표현력 — 절도+발차기',max:20},
+  {key:'balance',label:'표현력 — 균형',       max:10},
+  {key:'rhythm', label:'표현력 — 리듬',       max:10},
+];
 
-// ══════════════════════════════════════════
-//  유틸
-// ══════════════════════════════════════════
-function ang3(a,b,c){
-  const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y};
-  const d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
-  return m?Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI:180;
-}
-const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
-function toast(msg,ms=2200){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.classList.add('on');
-  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),ms);
-}
-function scr(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on');}
-function cv(v,mx){return v/mx>=.8?'gd':v/mx>=.5?'md':'bd';}
-
-// ══════════════════════════════════════════
-//  손 모양
-// ══════════════════════════════════════════
-function handShape(h){
-  if(!h)return'?';
-  const o=[8,12,16,20].filter(i=>h[i].y<h[i-2].y).length;
-  return o>=3?'open':o<=1?'fist':'partial';
+// ── 흐름
+function goGuide(){
+  const name=document.getElementById('nameInput').value.trim();
+  if(!name){alert('이름을 입력해주세요!');return;}
+  currentName=name;showScreen('s2');
 }
 
-// ══════════════════════════════════════════
-//  보정 계산
-// ══════════════════════════════════════════
-function calcCalib(lm){
-  if(!lm)return null;
-  const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24];
-  return{
-    sw:Math.abs(ls.x-rs.x),
-    hipY:(lh.y+rh.y)/2,
-    shY:(ls.y+rs.y)/2
-  };
-}
+async function startMeasure(){
+  showScreen('s3');
+  document.getElementById('playerBadge').textContent=currentName+' 선수';
+  document.getElementById('detectBadge').textContent='인식 대기';
+  document.getElementById('detectBadge').className='detect-badge';
+  document.getElementById('lockOverlay').style.display='flex';
+  document.getElementById('measureBtns').style.display='none';
+  document.getElementById('calibBtn').style.display='';
+  document.getElementById('startBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='none';
+  document.getElementById('freezeBar').style.display='none';
+  document.getElementById('liveTotal').textContent='-';
+  ['sStance','sArm','sPosture','sPower','sBalance','sRhythm'].forEach(id=>document.getElementById(id).textContent='-');
+  kiaiCount=0;maxKickHeight=0;updateKiaiUI();
+  isFrozen=false;scoringStartTime=null;
+  techHistory=[];techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;
+  velBuf=[];
+  lastScore={stance:0,arm:0,posture:14,power:0,balance:8,rhythm:0};
+  peakScore={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
+  prevLM=null;motionHist=[];frameSince=0;
+  Object.keys(aH).forEach(k=>aH[k]=[]);
+  prevAng={lKnee:135,rKnee:135,lElbow:160,rElbow:160};
+  isCalibDone=false;bodyRef.calibrated=false;
 
-// ══════════════════════════════════════════
-//  기술 유형 감지
-// ══════════════════════════════════════════
-function detectTech(lm,lh,rh){
-  if(!lm)return null;
-  const cd=calibData||calcCalib(lm);
-  if(!cd)return null;
-  const {hipY,shY,sw}=cd;
-  const la=lm[27],ra=lm[28],lw=lm[15],rw=lm[16];
+  setCam('카메라 연결 중...','');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;
+    await new Promise(r=>{video.onloadedmetadata=r;});
+    video.play();
+  }catch(e){setCam('❌ 카메라 권한 없음','설정에서 카메라를 허용해주세요');return;}
 
-  // 발차기
-  const kickH=Math.max(0,hipY-Math.min(la.y,ra.y));
-  if(kickH>0.06){
-    const rel=kickH/Math.max(hipY-shY,.01);
-    return{t:'KI',h:rel>.7?'H':'M'};
-  }
-  // 손기술
-  const aw=lw.y<rw.y?lw:rw;
-  const rel=(aw.y-shY)/Math.max(hipY-shY,.01);
-  const h=rel<0?'H':rel<.45?'M':'L';
-  const lE=ang3(lm[11],lm[13],lm[15]),rE=ang3(lm[12],lm[14],lm[16]);
-  const maxE=Math.max(lE,rE);
-  const shape=handShape(lw.y<rw.y?lh:rh);
-  if(maxE>160)return{t:'PU',h,shape};
-  if(shape==='open')return{t:'KN',h,shape};
-  return{t:'BL',h,shape};
-}
-
-// ══════════════════════════════════════════
-//  채점 (🛠️ 현재 동작 타겟에 맞는 가중치 필터링 기능 추가)
-// ══════════════════════════════════════════
-function scoreFrame(lm,lh,rh){
-  if(!lm)return null;
-  const cd=calibData||calcCalib(lm);
-  if(!cd)return null;
-  const {sw,hipY,shY}=cd;
-
-  const currentAction=poomSeq[step]||{t:'-',s:'-'};
-
-  // 서기 채점
-  let st=10;
-  {
-    const lk=ang3(lm[23],lm[25],lm[27]),rk=ang3(lm[24],lm[26],lm[28]);
-    const mn=Math.min(lk,rk),mx=Math.max(lk,rk);
-    const fS=mn>=120&&mn<=165?9:cl(9-Math.abs(mn-142)/5,0,9);
-    const bS=mx>=150&&mx<=180?6:cl(6-Math.abs(mx-165)/4,0,6);
-    const fd=Math.hypot(lm[31].x-lm[32].x,lm[31].y-lm[32].y);
-    const fdS=cl(5-Math.abs(fd-sw*1.7)/sw*10,0,5);
-    
-    let baseSt=cl(fS+bS+fdS,0,20);
-    // 🛠️ 동작 DB의 서기 규격(s)과 일치하면 가산점/불일치 시 디버프 가중치 연산
-    if(currentAction.s==='F' && mn>155) baseSt *= 0.85; // 앞굽이인데 무릎을 너무 폈을 때
-    if(currentAction.s==='B' && mx<140) baseSt *= 0.85; // 뒷굽이인데 체중 분배가 깨졌을 때
-    st=cl(baseSt,0,20);
-  }
-
-  // 손기술 채점
-  let ar=0;
-  {
-    const lE=ang3(lm[11],lm[13],lm[15]),rE=ang3(lm[12],lm[14],lm[16]);
-    const mx=Math.max(lE,rE),mn=Math.min(lE,rE);
-    const pS=mx>=165?8:cl((mx-130)/35*8,0,8);
-    const pullS=(mn>=45&&mn<=90)?4:cl(4-Math.abs(mn-67.5)/20,0,4);
-    const aw=lE>rE?lm[15]:lm[16];
-    const rel=(aw.y-shY)/Math.max(hipY-shY,.01);
-    const hS=(rel<0||(rel>=.3&&rel<=.7))?4:2;
-    const shp=handShape(lE>rE?lh:rh);
-    const shpB=shp==='fist'?2:shp==='open'?1.5:1;
-    
-    let baseAr=cl(pS+pullS+hS+shpB,0,20);
-    // 🛠️ 지르기(PU)나 막기(BL) 타겟 기술에 맞게 손모양 패널티 가중치 차등 적용
-    if(currentAction.t==='PU' && shp==='open') baseAr *= 0.7; // 지르기인데 손을 폈을 때
-    if(currentAction.t==='KN' && shp==='fist') baseAr *= 0.7; // 손날치기인데 주먹을 쥐었을 때
-    ar=cl(baseAr,0,20);
-  }
-
-  // 자세
-  let po=20;
-  {
-    const ls=lm[11],rs=lm[12],lh2=lm[23],rh2=lm[24];
-    const shT=Math.abs(ls.y-rs.y)/Math.max(sw,.01);
-    const hipT=Math.abs(lh2.y-rh2.y)/Math.max(sw,.01);
-    const sp=Math.abs((ls.x+rs.x)/2-(lh2.x+rh2.x)/2)/Math.max(sw,.01);
-    const hd=Math.abs(lm[0].x-(ls.x+rs.x)/2)/Math.max(sw,.01);
-    po=cl(20-cl(shT/.03,0,1)*5-cl(hipT/.03,0,1)*5-cl(sp/.05,0,1)*5-cl(hd/.05,0,1)*5,0,20);
-  }
-
-  // 절도
-  let pw=0;
-  {
-    const lE=ang3(lm[11],lm[13],lm[15]),rE=ang3(lm[12],lm[14],lm[16]);
-    const lK=ang3(lm[23],lm[25],lm[27]),rK=ang3(lm[24],lm[26],lm[28]);
-    let av=0;
-    if(prevAngles){
-      const dE=Math.max(Math.abs(lE-prevAngles.lE),Math.abs(rE-prevAngles.rE));
-      const dK=Math.max(Math.abs(lK-prevAngles.lK),Math.abs(rK-prevAngles.rK));
-      av=dE*.7+dK*.3;
-    }
-    prevAngles={lE,rE,lK,rK};
-    avHist.push(av);if(avHist.length>30)avHist.shift();
-    const peakAV=Math.max(...avHist);
-    const avS=cl(peakAV/18*16,0,16);
-    const la2=lm[27],ra2=lm[28];
-    const kh=Math.max(0,hipY-Math.min(la2.y,ra2.y));
-    const kB=kh/Math.max(hipY-shY,.01)>.8?4:kh/Math.max(hipY-shY,.01)>.4?2:0;
-    pw=cl(avS+kB,0,20);
-  }
-
-  // 균형
-  let ba=10;
-  {
-    const ls=lm[11],rs=lm[12],lh2=lm[23],rh2=lm[24];
-    const sT=Math.abs(ls.y-rs.y)/Math.max(sw,.01);
-    const hT=Math.abs(lh2.y-rh2.y)/Math.max(sw,.01);
-    ba=cl(10-cl(sT/.04,0,1)*4-cl(hT/.03,0,1)*4,5,10);
-  }
-
-  // 리듬
-  let rh2=10;
-  {
-    const lw2=lm[15],rw2=lm[16];
-    const mo=prevLM?Math.hypot(lw2.x-prevLM[15].x,lw2.y-prevLM[15].y)+Math.hypot(rw2.x-prevLM[16].x,rw2.y-prevLM[16].y):0;
-    rhythmHist.push(mo);if(rhythmHist.length>30)rhythmHist.shift();
-    if(rhythmHist.length>=10){
-      const avg=rhythmHist.reduce((s,v)=>s+v,0)/rhythmHist.length;
-      const std=Math.sqrt(rhythmHist.reduce((s,v)=>s+(v-avg)**2,0)/rhythmHist.length);
-      const act=cl(avg/.02,0,1);
-      rh2=cl(10*(1-Math.min(std/(avg||1),.8)*.5)*(.4+act*.6),0,10);
-    }
-  }
-  return{st,ar,po,pw,ba,rh:rh2};
-}
-
-// ══════════════════════════════════════════
-//  스무딩
-// ══════════════════════════════════════════
-function applySmooth(k,raw){
-  const up=raw>sm[k];
-  sm[k]=sm[k]*(up?.85:.99)+raw*(up?.15:.01);
-  if(sm[k]>pk[k])pk[k]=sm[k];
-}
-
-function addTech(ts){
-  const sum=t=>t.st+t.ar+t.pw;
-  if(techHist.length>3){
-    const avg=techHist.reduce((s,t)=>s+sum(t),0)/techHist.length;
-    if(sum(ts)<avg*.55)return;
-  }
-  techHist.push(ts);
-  if(techHist.length>TMAX)techHist.shift();
-}
-
-// ══════════════════════════════════════════
-//  🛠️ 자율형 실시간 시퀀스 싱크 알고리즘 (부령 프리 자동 인식)
-// ══════════════════════════════════════════
-function onTechDone(lm,lh,rh){
-  if(!scoring||isFrozen)return;
-  const det=detectTech(lm,lh,rh);
-  if(!det)return;
-
-  let bestMatchStep = -1;
-  // 🛠️ 탐색 윈도우 스캔: 현재 인덱스 기준 앞뒤 3단계 범위를 동적 추적하여 자동 싱크 매칭
-  let startLook = Math.max(0, step - 1);
-  let endLook = Math.min(poomSeq.length - 1, step + 3);
-
-  for(let i = startLook; i <= endLook; i++){
-    const exp = poomSeq[i];
-    if(techFamilyMatch(det.t, exp.t)){
-      bestMatchStep = i;
-      break; 
-    }
-  }
-
-  // 🛠️ 매칭된 단계가 검색망에 걸리면 사범님이 손대지 않아도 시퀀스가 자동으로 점프(인식)함
-  if(bestMatchStep !== -1){
-    step = bestMatchStep; 
-    const exp = poomSeq[step];
-    
-    document.getElementById('sh-match').textContent='✅ 동작 인식';
-    document.getElementById('sh-match').style.color='#3ddc84';
-    
-    if(exp.kihap && kiaiCnt === 0){
-      document.getElementById('sh-match').textContent='⚠️ 기합 누락 경고';
-      document.getElementById('sh-match').style.color='#ff9966';
-    }
-
-    // 다음 동작 대기를 위해 인덱스 한 칸 사전 준비
-    if(step < poomSeq.length - 1){
-      setTimeout(() => { if(scoring && !isFrozen && step === bestMatchStep) { step++; updateSeqUI(); } }, 1200);
-    }
-  } else {
-    // 완전 비정상적인 동작일 때만 경고 처리
-    const exp = poomSeq[step];
-    document.getElementById('sh-match').textContent=`❌ 미스 매치 (대기: ${exp.desc})`;
-    document.getElementById('sh-match').style.color='#ff5252';
-  }
-  updateSeqUI();
-}
-
-function techFamilyMatch(got,exp){
-  if(got===exp)return true;
-  const fam={
-    BL:['BL','BL2','KN','KN2','PB'],
-    PU:['PU','PU2','THR','ST','ST2'],
-    KI:['KI','KI2'],
-  };
-  for(const f of Object.values(fam)){
-    if(f.includes(got)&&f.includes(exp))return true;
-  }
-  return false;
-}
-
-function applyMismatch(amt){
-  seqDeds.push({step:step,desc:poomSeq[step]?.desc||'?',amount:amt});
-  updateSeqDedUI();
-  closeMismatch();
-}
-function closeMismatch(){document.getElementById('mismatch-ov').classList.remove('on');}
-
-// ══════════════════════════════════════════
-//  시퀀스 UI
-// ══════════════════════════════════════════
-function updateSeqUI(){
-  const s=poomSeq[step]||{desc:'완료',t:'-'};
-  const tot=poomSeq.length;
-  const stepTxt=`동작 ${step+1} / ${tot}`;
-  document.getElementById('sh-step').textContent=stepTxt;
-  document.getElementById('sh-desc').textContent=s.desc;
-  document.getElementById('sd-step').textContent=stepTxt;
-  document.getElementById('sd-exp').textContent=s.desc+(s.kihap?' ★기합':'');
-  document.getElementById('sd-exp').style.color=s.kihap?'#ff9966':'#ffd740';
-}
-function updateSeqDedUI(){
-  const tot=seqDeds.reduce((s,d)=>s+d.amount,0);
-  document.getElementById('sd-ded').textContent=`감점 ${tot.toFixed(1)}`;
-}
-function seqGo(d){
-  step=cl(step+d,0,poomSeq.length-1);
-  updateSeqUI();
-}
-function undoLastDed(){
-  if(!seqDeds.length){toast('취소할 감점이 없습니다.');return;}
-  seqDeds.pop();updateSeqDedUI();toast('마지막 감점 취소');
-}
-
-function doFreeze(){
-  isFrozen=true;frozenSc={...sm};
-  document.getElementById('frozen-badge').style.display='inline';
-  document.getElementById('fbar-lbl').textContent='❄️ 점수 동결됨';
-  document.getElementById('fbar-lbl').style.color='#40c4ff';
-  toast('❄️ 품새 완료 – 점수 동결');
-}
-
-// ══════════════════════════════════════════
-//  onResults
-// ══════════════════════════════════════════
-function onResults(res){
-  const video=document.getElementById('video');
-  const canvas=document.getElementById('canvas');
-  const ctx=canvas.getContext('2d');
-
-  const r=video.getBoundingClientRect();
-  if(canvas.width!==r.width||canvas.height!==r.height){
-    canvas.width=r.width;canvas.height=r.height;
-  }
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  if(res.poseLandmarks){
-    drawConnectors(ctx,res.poseLandmarks,POSE_CONNECTIONS,{color:'rgba(255,255,255,.4)',lineWidth:2});
-    drawLandmarks(ctx,res.poseLandmarks,{color:'#e84393',lineWidth:1,radius:3});
-  }
-  if(res.leftHandLandmarks){
-    drawConnectors(ctx,res.leftHandLandmarks,HAND_CONNECTIONS,{color:'rgba(61,220,132,.7)',lineWidth:2});
-    drawLandmarks(ctx,res.leftHandLandmarks,{color:'#3ddc84',lineWidth:1,radius:2});
-  }
-  if(res.rightHandLandmarks){
-    drawConnectors(ctx,res.rightHandLandmarks,HAND_CONNECTIONS,{color:'rgba(64,196,255,.7)',lineWidth:2});
-    drawLandmarks(ctx,res.rightHandLandmarks,{color:'#40c4ff',lineWidth:1,radius:2});
-  }
-
-  const lm=res.poseLandmarks,lh=res.leftHandLandmarks,rh=res.rightHandLandmarks;
-
-  const mpB=document.getElementById('mp-badge');
-  mpB.textContent=lm?'🟢 감지중':'🔴 미감지';
-  mpB.className='badge '+(lm?'g':'r');
-
-  if(lm){
-    const ls=lm[11],rs=lm[12],sw=Math.abs(ls.x-rs.x);
-    const zd=ls.z-rs.z;
-    const dir=sw<.08?(zd<0?'오른쪽':'왼쪽'):(zd<-.05?'약우측':zd>.05?'약좌측':'정면');
-    const dB=document.getElementById('dir-badge');
-    dB.textContent=dir;dB.className='badge '+(dir==='정면'?'g':'y');
-  }
-
-  if(!lm){prevLM=null;return;}
-
-  if(scoring&&!isFrozen){
-    const raw=scoreFrame(lm,lh,rh);
-    if(raw){
-      Object.keys(raw).forEach(k=>applySmooth(k,raw[k]));
-
-      const curAV=avHist.length?avHist[avHist.length-1]:0;
-      if(techPhase==='idle'){
-        if(curAV>MOVE_T){techPhase='moving';phFrames=1;}
-      }else if(techPhase==='moving'){
-        phFrames++;
-        if(curAV<SETTLE_T){
-          if(phFrames>=MIN_MV){techPhase='settling';phFrames=0;}
-          else{techPhase='idle';}
-        }
-      }else if(techPhase==='settling'){
-        phFrames++;
-        if(curAV>MOVE_T){techPhase='moving';phFrames=1;}
-        else if(phFrames>=MIN_ST){
-          onTechDone(lm,lh,rh);
-          addTech({st:raw.st,ar:raw.ar,pw:raw.pw});
-          techPhase='idle';phFrames=0;
-        }
-      }
-
-      const el=Date.now()-scoreStart;
-      const prog=cl(el/10000,0,1);
-      document.getElementById('fbar').style.width=(prog*100)+'%';
-      const mo=prevLM?Math.hypot(lm[15].x-prevLM[15].x,lm[15].y-prevLM[15].y)+
-        Math.hypot(lm[16].x-prevLM[16].x,lm[16].y-prevLM[16].y)+
-        (Math.hypot(lm[25].x-prevLM[25].x,lm[25].y-prevLM[25].y)+
-         Math.hypot(lm[26].x-prevLM[26].x,lm[26].y-prevLM[26].y))*.5:1;
-      if(mo<.006)stillFrames++;else stillFrames=0;
-      if(el>15000 && stillFrames>=35) doFreeze(); // 🛠️ 자동 묵음 완료 범위 여유 확보
-      else if(el>=10000)document.getElementById('fbar-lbl').textContent='✅ 동결 보호 활성화';
-    }
-
-    const fs={};
-    ['st','ar','po','pw','ba','rh'].forEach(k=>{fs[k]=Math.max(sm[k],pk[k]*.85);});
-    const tot=cl(fs.st+fs.ar+fs.po+fs.pw+fs.ba+fs.rh+kiaiSc,0,100);
-    updateScoreUI(fs,tot);
-  }
-  prevLM=lm;
-}
-
-// ══════════════════════════════════════════
-//  나머지 점수 및 시스템 코어 (규격 보존)
-// ══════════════════════════════════════════
-const maxMap={st:20,ar:20,po:20,pw:20,ba:10,rh:10};
-const idMap={st:'sc-st',ar:'sc-ar',po:'sc-po',pw:'sc-pw',ba:'sc-ba',rh:'sc-rh'};
-function updateScoreUI(fs,tot){
-  ['st','ar','po','pw','ba','rh'].forEach(k=>{
-    const el=document.getElementById(idMap[k]);
-    if(el){el.textContent=fs[k].toFixed(1);el.className='sv '+cv(fs[k],maxMap[k]);}
-  });
-  document.getElementById('sc-tot').textContent=tot.toFixed(1);
-}
-
-async function initMic(){
+  // 마이크
   try{
     const ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    const ac=new AudioContext();
-    const src=ac.createMediaStreamSource(ms);
-    micAna=ac.createAnalyser();micAna.fftSize=256;
-    src.connect(micAna);tickMic();
-  }catch(e){}
-}
-function tickMic(){
-  if(!micAna)return;
-  const d=new Uint8Array(micAna.frequencyBinCount);
-  micAna.getByteFrequencyData(d);
-  const vol=d.reduce((s,v)=>s+v,0)/d.length;
-  volHist.push(vol);if(volHist.length>20)volHist.shift();
-  const avg=volHist.reduce((s,v)=>s+v,0)/volHist.length;
-  if(scoring&&!isFrozen&&vol>45&&vol>avg*1.7&&Date.now()-lastKiai>1000&&kiaiCnt<5){
-    kiaiCnt++;kiaiSc=kiaiCnt*.4;lastKiai=Date.now();toast('기합! 🗣️');
-  }
-  const pct=cl(vol/80*100,0,100);
-  document.getElementById('kiai-bar').style.width=pct+'%';
-  document.getElementById('kiai-lbl').textContent=`${kiaiCnt}회 +${kiaiSc.toFixed(1)}`;
-  requestAnimationFrame(tickMic);
-}
+    micStream=ms;
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=audioCtx.createMediaStreamSource(ms);
+    analyser=audioCtx.createAnalyser();analyser.fftSize=256;
+    src.connect(analyser);
+    startKiai();
+  }catch(e){dbg('⚠️ 마이크 없음');}
 
-// 🛠️ 후면 강제 구동 객체 셋팅 유지
-async function initCam(){
-  const video=document.getElementById('video'),canvas=document.getElementById('canvas');
-  const ro=new ResizeObserver(()=>{
-    const r=video.getBoundingClientRect();
-    if(r.width>0){canvas.width=r.width;canvas.height=r.height;}
-  });
-  ro.observe(video);
-  try{
-    camStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
-    video.srcObject=camStream;
-    video.onloadedmetadata=()=>{video.play();runLoop(video);};
-  }catch(e){toast('카메라 오류: '+e.message);}
-}
-function runLoop(video){
-  async function loop(){
-    if(holistic&&video.readyState>=2)await holistic.send({image:video});
-    animId=requestAnimationFrame(loop);
+  if(!poseInst){
+    setCam('MediaPipe 로딩 중...','처음 20~30초 소요');
+    await waitLibs();await initPose();
   }
+  if(!poseInst){setCam('❌ AI 로드 실패','새로고침');return;}
+  document.getElementById('cam-overlay').style.display='none';
+  isRunning=true;isLocked=false;isScoring=false;
   loop();
 }
-function stopCam(){
-  if(animId){cancelAnimationFrame(animId);animId=null;}
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+
+function lockPerson(){
+  isLocked=true;
+  document.getElementById('lockOverlay').style.display='none';
+  document.getElementById('measureBtns').style.display='flex';
+  dbg('📌 고정 완료');
 }
 
-function doCalib(){
-  const ov=document.getElementById('calib-ov'),n=document.getElementById('calib-n');
-  ov.classList.add('on');let cnt=3;n.textContent=cnt;
-  calibData=null;
-  calibTimer=setInterval(()=>{
-    cnt--;n.textContent=cnt;
-    if(cnt<=0){
-      clearInterval(calibTimer);ov.classList.remove('on');
-      if(prevLM){calibData=calcCalib(prevLM);toast('✅ 체형 보정 완료');}
-      else toast('⚠️ 포즈 감지 안 됨');
+function startCalib(){
+  isCalibrating=true;
+  document.getElementById('calibOverlay').style.display='flex';
+  document.getElementById('calibBtn').style.display='none';
+  let prog=0;
+  document.getElementById('calibCount').textContent=3;
+  document.getElementById('calibFill').style.width='0%';
+  const iv=setInterval(()=>{
+    prog+=100/30;
+    document.getElementById('calibFill').style.width=Math.min(prog,100)+'%';
+    if(prog>=33)document.getElementById('calibCount').textContent=2;
+    if(prog>=66)document.getElementById('calibCount').textContent=1;
+    if(prog>=100){
+      clearInterval(iv);
+      isCalibrating=false;isCalibDone=true;
+      document.getElementById('calibOverlay').style.display='none';
+      document.getElementById('startBtn').style.display='';
+      document.getElementById('scoringLabel').textContent='보정 완료! 채점 시작 버튼을 누르세요';
+      dbg('✅ 체형 보정 완료');
     }
-  },1000);
+  },100);
 }
 
-function goMeasure(){
-  playerName=document.getElementById('inp-name').value.trim()||'선수';
-  poomName=document.getElementById('sel-poom').value;
-  poomSeq=DB[poomName]||[];
-  step=0;seqDeds=[];
-  resetState();updateSeqUI();updateSeqDedUI();
-  scr('s2');initCam();initMic();
+function startScoring(){
+  isScoring=true;isFrozen=false;
+  scoringStartTime=Date.now();
+  frameSince=0;motionHist=[];
+  document.getElementById('startBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='';
+  document.getElementById('freezeBar').style.display='flex';
+  document.getElementById('scoringLabel').textContent='채점 중...';
+  // 10초 카운트다운 UI
+  updateFreezeBar();
+  dbg('▶ 채점 시작!');
 }
 
-function resetState(){
-  scoring=false;isFrozen=false;frozenSc=null;stillFrames=0;scoreStart=0;
-  sm={st:0,ar:0,po:0,pw:0,ba:0,rh:0};pk={st:0,ar:0,po:0,pw:0,ba:0,rh:0};
-  techHist=[];avHist=[];rhythmHist=[];prevAngles=null;techPhase='idle';
-  kiaiCnt=0;kiaiSc=0;adjDelta={st:0,ar:0,po:0,pw:0,ba:0,rh:0};offAdj=0;
-  document.getElementById('fbar').style.width='0';
-  document.getElementById('fbar-lbl').textContent='채점 시작 후 10초 보호 구간';
-  document.getElementById('fbar-lbl').style.color='';
-  document.getElementById('frozen-badge').style.display='none';
-  if(document.getElementById('sh-match')) document.getElementById('sh-match').textContent='';
-  document.getElementById('btn-go').disabled=false;
-  updateScoreUI({st:0,ar:0,po:0,pw:0,ba:0,rh:0},0);
+function updateFreezeBar(){
+  if(!scoringStartTime||!isScoring)return;
+  const elapsed=(Date.now()-scoringStartTime)/1000;
+  const pct=Math.min(elapsed/10*100,100);
+  document.getElementById('freezeFill').style.width=pct+'%';
+  document.getElementById('freezeLabel').textContent=elapsed>=10?'✅ 보호됨':Math.ceil(10-elapsed)+'초';
+  if(elapsed<10&&isScoring) setTimeout(updateFreezeBar,500);
 }
 
-function startScore(){
-  if(!calibData&&prevLM)calibData=calcCalib(prevLM);
-  scoring=true;isFrozen=false;scoreStart=Date.now();stillFrames=0;
-  step=0;seqDeds=[];updateSeqUI();updateSeqDedUI();
-  document.getElementById('btn-go').disabled=true;
-  toast('▶ 채점 시작!');
+// ── 기합 감지
+function startKiai(){
+  if(!analyser)return;
+  const buf=new Uint8Array(analyser.frequencyBinCount);
+  const det=()=>{
+    if(!isRunning)return;
+    analyser.getByteFrequencyData(buf);
+    const vol=buf.reduce((a,b)=>a+b,0)/buf.length;
+    document.getElementById('kiaiFill').style.width=Math.min(vol/80*100,100)+'%';
+    kiaiVolHist.push(vol);if(kiaiVolHist.length>5)kiaiVolHist.shift();
+    if(vol>45&&!kiaiCooldown&&kiaiVolHist.length>=3&&isScoring){
+      const prev=kiaiVolHist.slice(0,-1).reduce((a,b)=>a+b,0)/(kiaiVolHist.length-1);
+      if(vol>prev*1.7){
+        kiaiCount=Math.min(kiaiCount+1,5);
+        updateKiaiUI();showBadge('kiaiBadge');
+        kiaiCooldown=true;setTimeout(()=>kiaiCooldown=false,1500);
+      }
+    }
+    requestAnimationFrame(det);
+  };det();
+}
+function updateKiaiUI(){
+  document.getElementById('kiaiCount').textContent=kiaiCount+'회 (+'+kiaiCount+'점)';
 }
 
-function stopScore(){
-  scoring=false;
-  const base=isFrozen?frozenSc:{...sm};
-  const fs={};
-  ['st','ar','po','pw','ba','rh'].forEach(k=>{fs[k]=Math.max(base[k]||0,pk[k]*.85);});
-  buildAdjScreen(fs);
-  scr('s3');
+// ── Pose
+async function initPose(){
+  try{
+    const pose=new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+    pose.setOptions({modelComplexity:1,smoothLandmarks:true,enableSegmentation:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+    pose.onResults(onResults);
+    poseInst=pose;dbg('✅ MediaPipe 준비');return true;
+  }catch(e){dbg('❌:'+e.message);return false;}
+}
+async function loop(){
+  if(!isRunning)return;
+  if(video.readyState>=2&&poseInst)try{await poseInst.send({image:video});}catch(e){}
+  if(isRunning)requestAnimationFrame(loop);
 }
 
-const keyList=['st','ar','po','pw','ba','rh'];
-const keyName={st:'서기(20)',ar:'손기술(20)',po:'자세(20)',pw:'절도(20)',ba:'균형(10)',rh:'리듬(10)'};
-let adjBase={};
+function onResults(results){
+  const rect=video.getBoundingClientRect();
+  canvas.width=rect.width>0?rect.width:video.videoWidth||640;
+  canvas.height=rect.height>0?rect.height:video.videoHeight||480;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!results.poseLandmarks){
+    document.getElementById('detectBadge').textContent='인식 안됨';
+    document.getElementById('detectBadge').className='detect-badge';
+    return;
+  }
+  const lm=results.poseLandmarks;
+  const badge=document.getElementById('detectBadge');
+  if(isFrozen){badge.textContent='❄️ 점수 동결';badge.className='detect-badge frozen';}
+  else{badge.textContent='✅ 인식됨';badge.className='detect-badge ok';}
 
-function buildAdjScreen(fs){
-  adjBase={...fs};
-  const g=document.getElementById('adj-grid');g.innerHTML='';
-  keyList.forEach(k=>{
-    const d=document.createElement('div');d.className='adj-item';
-    d.innerHTML=`<div class="adj-nm">${keyName[k]}</div>
-      <div class="adj-row">
-        <span class="adj-v" id="av-${k}">${(fs[k]+(adjDelta[k]||0)).toFixed(1)}</span>
-        <div class="adj-btns">
-          <button class="btn-m" onclick="adjItem('${k}',-0.1)">−</button>
-          <button class="btn-p" onclick="adjItem('${k}',+0.1)">＋</button>
-        </div>
-      </div>`;
-    g.appendChild(d);
+  drawConnectors(ctx,lm,POSE_CONNECTIONS,{color:'rgba(129,140,248,0.85)',lineWidth:3});
+  drawLandmarks(ctx,lm,{color:'#c084fc',lineWidth:1,radius:4});
+
+  if(isCalibrating)measureBody(lm);
+  if(isRunning&&isScoring)scoreLM(lm);
+  if(isScoring)updateLiveUI();
+}
+
+function measureBody(lm){
+  const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24],la=lm[27],ra=lm[28],lw=lm[15],rw=lm[16];
+  if(!ls||ls.visibility<0.5)return;
+  bodyRef.shoulderW=Math.max(d(ls,rs),0.05);
+  bodyRef.torsoH=Math.max(d(mid(ls,rs),mid(lh,rh)),0.05);
+  bodyRef.legLen=Math.max((d(lh,la)+d(rh,ra))/2,0.1);
+  bodyRef.armLen=Math.max((d(ls,lw)+d(rs,rw))/2,0.1);
+  bodyRef.hipY=(lh.y+rh.y)/2;
+  bodyRef.shoulderY=(ls.y+rs.y)/2;
+  bodyRef.calibrated=true;
+}
+
+// ── 100점 만점 채점
+// 기본점 0 → 동작할수록 올라가는 방식
+// 평균 65~72 / 잘하면 85~92 / 최상위 95+
+function scoreLM(lm){
+  const ls=lm[11],rs=lm[12],le=lm[13],re=lm[14];
+  const lw=lm[15],rw=lm[16],lh=lm[23],rh=lm[24];
+  const lk=lm[25],rk=lm[26],la=lm[27],ra=lm[28];
+  if(!ls||!rs||ls.visibility<0.35)return;
+
+  const sw=bodyRef.calibrated?bodyRef.shoulderW:Math.max(d(ls,rs),0.05);
+  const hipY=bodyRef.calibrated?bodyRef.hipY:(lh.y+rh.y)/2;
+  const shY=bodyRef.calibrated?bodyRef.shoulderY:(ls.y+rs.y)/2;
+
+  // ── 움직임 측정
+  let motion=0;
+  if(prevLM){
+    motion=d(lw,prevLM[15])+d(rw,prevLM[16])+d(lk,prevLM[25])*0.5+d(rk,prevLM[26])*0.5;
+    motionHist.push(motion);if(motionHist.length>30)motionHist.shift();
+    if(motion>0.005)frameSince=0;else frameSince++;
+  }
+  prevLM=lm;
+
+  // ── 10초 보호 + 동결
+  const elapsed=scoringStartTime?(Date.now()-scoringStartTime)/1000:0;
+  if(elapsed>10&&frameSince>=18){
+    if(!isFrozen){isFrozen=true;frozenAt={...lastScore};dbg('❄️ 점수 동결!');}
+    return;
+  }
+  if(elapsed<=10&&frameSince>=18){dbg('⏱ 대기 (10초 보호)');return;}
+
+  // ── 관절 각도 (15프레임 이력 평균)
+  const lKA=a3(lh,lk,la),rKA=a3(rh,rk,ra);
+  const lEA=a3(ls,le,lw),rEA=a3(rs,re,rw);
+  pushH('lKnee',lKA);pushH('rKnee',rKA);
+  pushH('lElbow',lEA);pushH('rElbow',rEA);
+  const avgLK=avgH('lKnee'),avgRK=avgH('rKnee');
+  const avgLE=avgH('lElbow'),avgRE=avgH('rElbow');
+
+  // ── 각속도 (5프레임 스무딩)
+  const lKV=Math.abs(lKA-prevAng.lKnee),rKV=Math.abs(rKA-prevAng.rKnee);
+  const lEV=Math.abs(lEA-prevAng.lElbow),rEV=Math.abs(rEA-prevAng.rElbow);
+  const rawVel=(lEV+rEV)*0.7+(lKV+rKV)*0.3;
+  prevAng={lKnee:lKA,rKnee:rKA,lElbow:lEA,rElbow:rEA};
+  // RAW 피크 별도 추적 (스무딩 전)
+  rawPeakVel=techPhase==='moving'?Math.max(rawPeakVel,rawVel):rawPeakVel;
+  velBuf.push(rawVel);if(velBuf.length>3)velBuf.shift();
+  const smVel=velBuf.reduce((a,b)=>a+b,0)/velBuf.length;
+
+  // ── 기술 상태 머신 (핵심 개선)
+  // idle → (smVel>3.5) → moving → (smVel<1.5 after peak) → settling → score → idle
+  const V_START=2.5, V_END=1.2; // 빠른 전문가 동작 감지 강화
+  if(techPhase==='idle'&&smVel>V_START){
+    techPhase='moving';
+    techPeakVel=smVel;
+    techBestAngles=null;techBestQ=0;
+  }
+  if(techPhase==='moving'){
+    techPeakVel=Math.max(techPeakVel,smVel);
+    // 기술 중 최고 자세 포착 (각도가 가장 좋은 순간)
+    const q=evalQ(avgLK,avgRK,avgLE,avgRE);
+    if(q>techBestQ){
+      techBestQ=q;
+      techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
+    }
+    if(smVel<V_END&&techPeakVel>V_START){
+      techPhase='settling';
+    }
+  }
+  if(techPhase==='settling'){
+    if(smVel<0.8){
+      // 기술 완료 → 채점 (RAW 피크와 스무딩 피크 중 높은 값)
+      const effectivePeak=Math.max(techPeakVel, rawPeakVel*0.85);
+      if(effectivePeak>4&&techBestAngles){
+        const ts=scoreTech(techBestAngles,effectivePeak,lm,hipY,shY,sw);
+        techHistory.push(ts);
+        if(techHistory.length>TECH_MAX)techHistory.shift();
+        dbg('✅ 기술완료 v='+techPeakVel.toFixed(1)+' 서기:'+ts.stance+' 손:'+ts.arm+' 절도:'+ts.power);
+      }
+      techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;
+    }
+  }
+
+  // ── 발차기 감지
+  const ankleY=Math.min(la.y,ra.y);
+  kickHeight=Math.max(0,hipY-ankleY);
+  let kickBonus=0;
+  if(kickHeight>0.04&&!kickCooldown){
+    maxKickHeight=Math.max(maxKickHeight,kickHeight);
+    const kr=kickHeight/Math.max(hipY-shY,0.01);
+    kickBonus=kr>=1.0?5:kr>=0.7?4:kr>=0.4?3:kr>=0.2?2:1;
+    if(!kickDetected){
+      kickDetected=true;kickCooldown=true;
+      showBadge('kickBadge');
+      // 발차기를 기술 이력에 추가
+      techHistory.push({stance:Math.max(lastScore.stance,10),arm:Math.max(lastScore.arm,10),power:Math.min(lastScore.power+kickBonus,20)});
+      if(techHistory.length>TECH_MAX)techHistory.shift();
+      setTimeout(()=>{kickDetected=false;kickCooldown=false;},1000);
+    }
+  }else if(kickHeight<0.015)kickDetected=false;
+
+  // ── 기술 이력 가중 평균 (최근일수록 높은 가중치)
+  let stanceScore=0,armScore=0,powerScore=0;
+  if(techHistory.length>0){
+    let wS=0,wA=0,wP=0,wT=0;
+    techHistory.forEach((ts,i)=>{
+      const w=Math.pow(0.92,techHistory.length-1-i); // 지수 감쇠
+      wT+=w;wS+=ts.stance*w;wA+=ts.arm*w;wP+=ts.power*w;
+    });
+    stanceScore=wS/wT;armScore=wA/wT;powerScore=wP/wT;
+  }
+
+  // ── 자세 (매 프레임 채점)
+  const sTilt=Math.abs(ls.y-rs.y)/sw;
+  const hTilt=Math.abs(lh.y-rh.y)/sw;
+  const sLean=Math.abs((ls.x+rs.x)/2-(lh.x+rh.x)/2)/sw;
+  const headD=lm[0]?Math.abs(lm[0].x-(ls.x+rs.x)/2)/sw:0;
+  let postureScore=20;
+  if(sTilt>0.04)postureScore-=sTilt*15;
+  if(hTilt>0.04)postureScore-=hTilt*12;
+  if(sLean>0.07)postureScore-=sLean*10;
+  if(headD>0.1)postureScore-=headD*6;
+  postureScore=Math.max(11,Math.min(20,postureScore));
+
+  // ── 균형
+  let balScore=10;
+  if(sTilt>0.04)balScore-=sTilt*12;
+  if(hTilt>0.04)balScore-=hTilt*9;
+  balScore=Math.max(5,Math.min(10,balScore));
+
+  // ── 리듬 (기술 개수 + 움직임 일관성)
+  let rhythmScore=0;
+  if(motionHist.length>8){
+    const am=motionHist.reduce((a,b)=>a+b,0)/motionHist.length;
+    if(am>0.003){
+      const cv=Math.sqrt(motionHist.reduce((a,b)=>a+Math.pow(b-am,2),0)/motionHist.length)/am;
+      const actS=Math.min(am*180,5);
+      const conS=Math.max(0,5-cv*2.5);
+      rhythmScore=Math.min(actS*0.5+conS*0.5+Math.min(techHistory.length*0.25,2),10);
+    }
+  }
+
+  // ── 비대칭 스무딩 (올라갈때 빠르게, 내려갈때 아주 느리게)
+  const smUp=0.22,smDown=0.025;
+  function sm(p,n){return n>p?p*(1-smUp)+n*smUp:p*(1-smDown)+n*smDown;}
+  lastScore.stance=sm(lastScore.stance,stanceScore);
+  lastScore.arm=sm(lastScore.arm,armScore);
+  lastScore.posture=sm(lastScore.posture,postureScore);
+  lastScore.power=sm(lastScore.power,powerScore);
+  lastScore.balance=sm(lastScore.balance,balScore);
+  lastScore.rhythm=sm(lastScore.rhythm,rhythmScore);
+
+  // 피크 갱신
+  Object.keys(peakScore).forEach(k=>peakScore[k]=Math.max(peakScore[k],lastScore[k]));
+}
+
+// ── 기술 중 자세 품질 평가 (최고 순간 포착용)
+function evalQ(lK,rK,lE,rE){
+  const fK=Math.min(lK,rK),bK=Math.max(lK,rK);
+  const extE=Math.max(lE,rE),retE=Math.min(lE,rE);
+  // 앞굽이 판정
+  const stQ=(fK>=120&&fK<=165)?1-(Math.abs(fK-140)/22):0;
+  // 팔 뻗기 판정
+  const armQ=extE>=150?(extE-150)/30:0;
+  // 당기기 판정
+  const retQ=retE<=120?(120-retE)/60:0;
+  return stQ*0.4+armQ*0.4+retQ*0.2;
+}
+
+// ── 참조 각도 기반 정확도 점수 계산
+function refAccuracy(actual, ref) {
+  if(!ref) return 0.5;
+  const dev = Math.abs(actual - ref.mean);
+  const s   = ref.std > 0 ? ref.std : 15;
+  return Math.max(0, 1 - dev / (s * 2));
+}
+
+// ── 완료된 기술 채점 (학습 데이터 + WT 공식 기준 혼합)
+function scoreTech(angles,peakVel,lm,hipY,shY,sw){
+  const {lK,rK,lE,rE}=angles;
+  const la=lm?lm[27]:null,ra=lm?lm[28]:null;
+  const ref=REFERENCE_ANGLES[currentPoomsae]||null;
+
+  // ① 서기 (20점)
+  const fK=Math.min(lK,rK),bK=Math.max(lK,rK);
+  let stance=0;
+  if(ref){
+    // 학습 데이터 기반: 참조 각도와 가까울수록 높은 점수
+    const lAcc = refAccuracy(lK, ref.left_knee);
+    const rAcc = refAccuracy(rK, ref.right_knee);
+    stance = Math.round((lAcc+rAcc)/2 * 16); // 최대 16점 기본
+    // 앞굽이 형태 보너스 (WT 기준 유지)
+    if(fK>=120&&fK<=165) stance=Math.min(stance+4,20);
+    if(bK>=145&&bK<=180) stance=Math.min(stance+2,20);
+  } else {
+    // 학습 데이터 없으면 기존 방식
+    if(fK>=125&&fK<=155) stance=14+Math.round((1-Math.abs(fK-140)/15)*4);
+    else if(fK>=110&&fK<125) stance=10;
+    else if(fK>155&&fK<=170) stance=10;
+    else if(fK>170) stance=6;
+    else stance=4;
+    if(bK>=155&&bK<=178) stance=Math.min(stance+4,20);
+    else if(bK>=145) stance=Math.min(stance+2,20);
+  }
+  if(la&&ra){
+    const gap=Math.abs(la.x-ra.x)/sw;
+    if(gap>=0.9&&gap<=2.3) stance=Math.min(stance+2,20);
+  }
+  stance=Math.min(Math.round(stance),20);
+
+  // ② 손기술 (20점)
+  const extE=Math.max(lE,rE),retE=Math.min(lE,rE);
+  let arm=0;
+  if(ref){
+    // 학습 데이터 기반
+    const lAcc = refAccuracy(lE, ref.left_elbow);
+    const rAcc = refAccuracy(rE, ref.right_elbow);
+    arm = Math.round((lAcc+rAcc)/2 * 14); // 최대 14점 기본
+    // 뻗기/당기기 보너스 (WT 기준 유지)
+    if(extE>=160) arm=Math.min(arm+4,20);
+    else if(extE>=145) arm=Math.min(arm+2,20);
+    if(retE<=80) arm=Math.min(arm+4,20);
+    else if(retE<=110) arm=Math.min(arm+2,20);
+  } else {
+    if(extE>=170) arm=11;
+    else if(extE>=160) arm=9;
+    else if(extE>=150) arm=7;
+    else if(extE>=135) arm=5;
+    else arm=3;
+    if(retE<=60) arm+=7;
+    else if(retE<=80) arm+=6;
+    else if(retE<=100) arm+=5;
+    else if(retE<=120) arm+=3;
+    else if(retE<=140) arm+=1;
+  }
+  arm=Math.min(Math.round(arm),20);
+
+  // ③ 절도 (20점) — RAW 피크 기반 로그스케일
+  let power=0;
+  if(peakVel>=5){
+    power=Math.min(Math.round(Math.log(peakVel/5+1)/Math.log(12)*20),20);
+  }
+  if(arm>=16&&peakVel>=25) power=Math.min(power+3,20);
+  else if(arm>=12&&peakVel>=15) power=Math.min(power+2,20);
+  else if(arm>=10&&peakVel>=10) power=Math.min(power+1,20);
+
+  return{stance,arm,power};
+}
+
+function updateLiveUI(){
+  const sc=isFrozen?frozenAt:lastScore;
+  const kiaiB=Math.min(kiaiCount,5);
+  const total=Math.min(sc.stance+sc.arm+sc.posture+sc.power+sc.balance+sc.rhythm+kiaiB,100);
+  document.getElementById('sStance').textContent=sc.stance.toFixed(0);
+  document.getElementById('sArm').textContent=sc.arm.toFixed(0);
+  document.getElementById('sPosture').textContent=sc.posture.toFixed(0);
+  document.getElementById('sPower').textContent=sc.power.toFixed(0);
+  document.getElementById('sBalance').textContent=sc.balance.toFixed(0);
+  document.getElementById('sRhythm').textContent=sc.rhythm.toFixed(0);
+  document.getElementById('liveTotal').textContent=total.toFixed(0);
+}
+
+function stopMeasure(){
+  isRunning=false;isScoring=false;isLocked=false;
+  if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;}
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}
+
+  // 동결된 점수 또는 누적 평균 중 더 좋은 것 사용
+  const avgSc={
+    stance:Math.max(av(sA.stance),peakScore.stance*0.9),
+    arm:Math.max(av(sA.arm),peakScore.arm*0.9),
+    posture:Math.max(av(sA.posture),peakScore.posture*0.9),
+    power:Math.max(av(sA.power),peakScore.power*0.9),
+    balance:Math.max(av(sA.balance),peakScore.balance*0.9),
+    rhythm:Math.max(av(sA.rhythm),peakScore.rhythm*0.9),
+  };
+  if(isFrozen&&frozenAt){
+    Object.keys(avgSc).forEach(k=>avgSc[k]=Math.max(avgSc[k],frozenAt[k]));
+  }
+
+  const kiaiB=Math.min(kiaiCount,5);
+  const total=Math.min(Math.round(Object.values(avgSc).reduce((s,v)=>s+v,0)+kiaiB),100);
+
+  aiScoreData={...avgSc,kiai:kiaiB,total};
+  adjustments={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0}; aiScoreData.total=total;
+  deductCounts=[0,0,0,0];
+  judgeScores={j0:0,j1:0,j2:0,j3:0};
+
+  document.getElementById('adjName').textContent=currentName+' 선수';
+  document.getElementById('adjAI').textContent=total;
+  document.getElementById('adjSub').textContent=`AI 측정 ${total}점 / 100점 만점 | 기합 ${kiaiCount}회 (+${kiaiB}점) | 최고 발차기 높이 ${(maxKickHeight*100).toFixed(0)}%`;
+  buildAdjustList();buildJudgeItems();updateFinalSummary();
+  showScreen('s4');
+}
+
+function buildJudgeItems(){
+  const wrap=document.getElementById('judgeItems');
+  wrap.innerHTML='';
+  JUDGE_ITEMS.forEach(item=>{
+    const val=judgeScores[item.id];
+    const valClass=val>0?'pos':val<0?'neg':'zero';
+    const div=document.createElement('div');
+    div.className='judge-item';
+    div.innerHTML=`
+      <div class="judge-label">
+        <span class="judge-name">${item.name}</span>
+        <span class="judge-pts">${item.minusLabel} &nbsp;|&nbsp; ${item.plusLabel}</span>
+      </div>
+      <button class="jbtn jbtn-minus" onclick="tapJudge('${item.id}',-1)">−</button>
+      <span class="judge-val ${valClass}" id="${item.id}_val">${val>=0?'+':''}${val}</span>
+      <button class="jbtn jbtn-plus" onclick="tapJudge('${item.id}',+1)">+</button>`;
+    wrap.appendChild(div);
   });
-  const seqTot=seqDeds.reduce((s,d)=>s+d.amount,0);
-  document.getElementById('s3-seq-tot').textContent=seqTot.toFixed(1)+'점';
-  document.getElementById('s3-seq-log').innerHTML=seqDeds.length?
-    seqDeds.map(d=>`#${d.step+1} ${d.desc}: ${d.amount.toFixed(1)}`).join('<br>'):'없음';
-  calcFinal();
 }
 
-function adjItem(k,d){
-  adjDelta[k]=(adjDelta[k]||0)+d;
-  document.getElementById('av-'+k).textContent=cl((adjBase[k]||0)+adjDelta[k],0,maxMap[k]).toFixed(1);
-  calcFinal();
+function tapJudge(id, dir){
+  const item=JUDGE_ITEMS.find(i=>i.id===id);
+  if(dir>0) judgeScores[id]+=item.plus;
+  else judgeScores[id]+=item.minus;
+  // 최소/최대 제한
+  judgeScores[id]=Math.max(item.minus*3, Math.min(item.plus*3, judgeScores[id]));
+  const val=judgeScores[id];
+  const el=document.getElementById(id+'_val');
+  el.textContent=(val>=0?'+':'')+val;
+  el.className='judge-val '+(val>0?'pos':val<0?'neg':'zero');
+  updateFinalSummary();
 }
 
-function applyOff(v){offAdj+=v;calcFinal();toast(v>0?`+${v}점 가산`:`${v}점 감점`);}
+function buildAdjustList(){
+  const list=document.getElementById('adjustList');list.innerHTML='';
+  ITEMS.forEach(item=>{
+    const ai=Math.round(aiScoreData[item.key]);
+    const div=document.createElement('div');div.className='adjust-item';
+    div.innerHTML=`
+      <button class="adj-btn adj-minus" onclick="adjust('${item.key}',-1)">−</button>
+      <div class="adjust-item-label">
+        <span class="adjust-item-name">${item.label}</span>
+        <span class="adjust-item-ai">AI: ${ai} / ${item.max}점</span>
+      </div>
+      <span class="adjust-val" id="av_${item.key}">${ai}</span>
+      <button class="adj-btn adj-plus" onclick="adjust('${item.key}',+1)">+</button>`;
+    list.appendChild(div);
+  });
+}
 
-function calcFinal(){
-  let ai=0;
-  keyList.forEach(k=>{ai+=cl((adjBase[k]||0)+(adjDelta[k]||0),0,maxMap[k]);});
-  ai=Math.min(ai,100);
-  const seqTot=seqDeds.reduce((s,d)=>s+d.amount,0);
-  const fin=cl(ai+kiaiSc+offAdj+seqTot,0,100);
-  document.getElementById('f-sc').textContent=fin.toFixed(1);
-  document.getElementById('f-bk').textContent=
-    `AI ${ai.toFixed(1)} + 기합 ${kiaiSc.toFixed(1)} + 조정 ${offAdj>=0?'+':''}${offAdj.toFixed(1)} + 시퀀스 ${seqTot.toFixed(1)}`;
-  return fin;
+function adjust(key,delta){
+  adjustments[key]=(adjustments[key]||0)+delta;
+  const item=ITEMS.find(i=>i.key===key);
+  const cur=Math.max(0,Math.min(item.max+5,Math.round(aiScoreData[key])+adjustments[key]));
+  document.getElementById('av_'+key).textContent=cur;
+  updateFinalSummary();
+}
+
+function tapDeduct(i){
+  deductCounts[i]++;if(deductCounts[i]>9)deductCounts[i]=0;
+  document.getElementById('dn'+i).textContent=deductCounts[i];
+  document.getElementById('db'+i).classList.toggle('on',deductCounts[i]>0);
+  updateFinalSummary();
+}
+
+function updateFinalSummary(){
+  const aiT=aiScoreData.total;
+  const adjT=Object.values(adjustments).reduce((s,v)=>s+v,0);
+  const judgeT=Object.values(judgeScores).reduce((s,v)=>s+v,0);
+  const total=aiT+adjT+judgeT;
+  const final=Math.max(0,Math.min(100,total));
+  document.getElementById('sumAI').textContent=aiT;
+  document.getElementById('sumAdj').textContent=(adjT>=0?'+':'')+adjT;
+  document.getElementById('sumAdj').style.color=adjT>=0?'#4ade80':'#f87171';
+  document.getElementById('sumDeduct').textContent=(judgeT>=0?'+':'')+judgeT;
+  document.getElementById('sumDeduct').style.color=judgeT>=0?'#4ade80':'#f87171';
+  document.getElementById('sumFinal').textContent=final;
 }
 
 function confirmScore(){
-  const fin=calcFinal();
-  const fs2={};keyList.forEach(k=>{fs2[k]=cl((adjBase[k]||0)+(adjDelta[k]||0),0,maxMap[k]);});
-  rankings.push({name:playerName,poom:poomName,score:fin,det:fs2,kiai:kiaiSc,seq:seqDeds.reduce((s,d)=>s+d.amount,0),off:offAdj});
-  rankings.sort((a,b)=>b.score-a.score);
-  buildRankScreen();scr('s4');stopCam();
+  const adjT=Object.values(adjustments).reduce((s,v)=>s+v,0);
+  const judgeT=Object.values(judgeScores).reduce((s,v)=>s+v,0);
+  const final=Math.max(0,Math.min(100,aiScoreData.total+adjT+judgeT));
+  players.push({name:currentName,final,ai:aiScoreData.total,adj:adjT,judge:judgeT,kiai:kiaiCount,detail:{...aiScoreData}});
+  document.getElementById('showRankBtn').style.display='';
+  document.getElementById('nameInput').value='';
+  renderRank();showScreen('s5');
 }
-function remeasure(){resetState();scr('s2');}
 
-const medals=['🥇','🥈','🥉'];
-function buildRankScreen(){
-  document.getElementById('rank-list').innerHTML=rankings.map((r,i)=>`
-    <div class="ri">
-      <div class="ri-medal">${medals[i]||(i+1)+'위'}</div>
-      <div class="ri-info">
-        <div class="ri-name">${r.name}</div>
-        <div class="ri-pm">${r.poom}</div>
-        <div class="ri-det">서기${r.det.st?.toFixed(1)} 손${r.det.ar?.toFixed(1)} 자세${r.det.po?.toFixed(1)} 절도${r.det.pw?.toFixed(1)} 균형${r.det.ba?.toFixed(1)} 리듬${r.det.rh?.toFixed(1)}</div>
+function remeasure(){document.getElementById('nameInput').value=currentName;showScreen('s1');}
+
+function renderRank(){
+  const sorted=[...players].sort((a,b)=>b.final-a.final);
+  const medals=['🥇','🥈','🥉','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+  const cls=['r1','r2','r3','','','','','','',''];
+  const list=document.getElementById('rankList');list.innerHTML='';
+  sorted.forEach((p,i)=>{
+    const div=document.createElement('div');div.className='rank-item '+(cls[i]||'');
+    div.innerHTML=`<div class="rank-medal">${medals[i]||i+1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${p.name}</div>
+        <div class="rank-detail">AI ${p.ai} ${p.adj>=0?'+':''}${p.adj} 조정 ${p.judge>=0?'+':''}${p.judge} 심판 | 기합 ${p.kiai}회<br>
+        서기 ${Math.round(p.detail.stance)} | 손기술 ${Math.round(p.detail.arm)} | 자세 ${Math.round(p.detail.posture)} | 절도 ${Math.round(p.detail.power)} | 균형 ${Math.round(p.detail.balance)} | 리듬 ${Math.round(p.detail.rhythm)}</div>
       </div>
-      <div class="ri-sc">${r.score.toFixed(1)}</div>
-    </div>`).join('');
-}
-function nextPlayer(){
-  seqDeds=[];resetState();calibData=null;scr('s1');stopCam();
-  document.getElementById('rank-hint').textContent=`현재 ${rankings.length}명 등록`;
-}
-function resetAll(){
-  if(!confirm('전체 순위를 초기화할까요?'))return;
-  rankings=[];seqDeds=[];resetState();calibData=null;scr('s1');stopCam();
-  document.getElementById('rank-hint').textContent='';
-}
-
-function initMP(){
-  holistic=new Holistic({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${f}`});
-  holistic.setOptions({modelComplexity:1,smoothLandmarks:true,
-    enableSegmentation:false,refineFaceLandmarks:false,
-    minDetectionConfidence:.5,minTrackingConfidence:.5});
-  holistic.onResults(onResults);
-  holistic.initialize().then(()=>{
-    document.getElementById('loading').style.display='none';
-    scr('s1');
-  }).catch(e=>{
-    document.querySelector('.ld-txt').textContent='로딩 실패 – 새로고침';
-    console.error(e);
+      <div class="rank-score">${p.final}</div>`;
+    list.appendChild(div);
   });
 }
 
-window.addEventListener('load',initMP);
+function goRank(){renderRank();showScreen('s5');}
+function goInput(){showScreen('s1');}
+function resetAll(){players=[];document.getElementById('showRankBtn').style.display='none';showScreen('s1');}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showBadge(id){const b=document.getElementById(id);b.style.display='block';setTimeout(()=>b.style.display='none',700);}
+function d(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
+function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+function a3(a,b,c){
+  if(!a||!b||!c)return 135;
+  if((a.visibility||1)<0.2||(b.visibility||1)<0.2||(c.visibility||1)<0.2)return 135;
+  const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y};
+  const dot=ab.x*cb.x+ab.y*cb.y;
+  const mag=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
+  return mag===0?135:Math.acos(Math.max(-1,Math.min(1,dot/mag)))*180/Math.PI;
+}
+function pushH(k,v){aH[k].push(v);if(aH[k].length>HIST)aH[k].shift();}
+function avgH(k){return aH[k].length?aH[k].reduce((a,b)=>a+b,0)/aH[k].length:135;}
+function av(arr){return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;}
+function setCam(t,s){document.getElementById('camTxt').textContent=t;document.getElementById('camSub').textContent=s;}
+function dbg(t){document.getElementById('dbg').textContent=t;}
+async function waitLibs(){
+  return new Promise(res=>{
+    const s=Date.now();const t=setInterval(()=>{
+      if(window.Pose&&window.drawConnectors){clearInterval(t);res();}
+      else if(Date.now()-s>25000){clearInterval(t);res();}
+    },300);
+  });
+}
+(async()=>{await waitLibs();if(window.Pose)await initPose();else dbg('⚠️ 라이브러리 로드 실패');})();
 </script>
 </body>
 </html>
