@@ -32,8 +32,8 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 .guide-title-t{font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;}
 .guide-desc{font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;}
 .camera-box{position:relative;width:100%;background:#000;border-radius:16px;overflow:hidden;border:2px solid #312e81;}
-#video{width:100%;height:auto;display:block;}
-#canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+#video{width:100%;height:auto;display:block;object-fit:fill;}
+#canvas{position:absolute;top:0;left:0;pointer-events:none;}
 .player-badge{position:absolute;top:10px;left:10px;z-index:10;background:rgba(0,0,0,0.75);border-radius:10px;padding:5px 12px;font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;border:1px solid rgba(99,102,241,0.5);}
 .detect-badge{position:absolute;top:10px;right:10px;z-index:10;padding:5px 12px;border-radius:10px;font-size:11px;background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;transition:all 0.3s;}
 .detect-badge.ok{background:rgba(74,222,128,0.3);border-color:#4ade80;color:#4ade80;}
@@ -364,7 +364,7 @@ async function startMeasure(){
   ['sStance','sArm','sPosture','sPower','sBalance','sRhythm'].forEach(id=>document.getElementById(id).textContent='-');
   kiaiCount=0;maxKickHeight=0;updateKiaiUI();
   isFrozen=false;scoringStartTime=null;
-  techHistory=[];techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;
+  techHistory=[];techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;techSettleFrames=0;
   velBuf=[];
   lastScore={stance:0,arm:0,posture:14,power:0,balance:8,rhythm:0};
   peakScore={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
@@ -398,6 +398,19 @@ async function startMeasure(){
   }
   if(!poseInst){setCam('❌ AI 로드 실패','새로고침');return;}
   document.getElementById('cam-overlay').style.display='none';
+  // ── ResizeObserver: video 크기 변할 때마다 canvas 동기화
+  if(window._roObs) window._roObs.disconnect();
+  window._roObs = new ResizeObserver(()=>{
+    const r=video.getBoundingClientRect();
+    if(r.width>0&&r.height>0){
+      canvas.width=Math.round(r.width);
+      canvas.height=Math.round(r.height);
+      canvas.style.width=Math.round(r.width)+'px';
+      canvas.style.height=Math.round(r.height)+'px';
+    }
+  });
+  window._roObs.observe(video);
+
   isRunning=true;isLocked=false;isScoring=false;
   loop();
 }
@@ -495,9 +508,16 @@ async function loop(){
 }
 
 function onResults(results){
+  // ── canvas를 video 실제 표시 크기에 정확히 동기화
   const rect=video.getBoundingClientRect();
-  canvas.width=rect.width>0?rect.width:video.videoWidth||640;
-  canvas.height=rect.height>0?rect.height:video.videoHeight||480;
+  const cw=rect.width>0?Math.round(rect.width):video.videoWidth||640;
+  const ch=rect.height>0?Math.round(rect.height):video.videoHeight||480;
+  if(canvas.width!==cw||canvas.height!==ch){
+    canvas.width=cw;
+    canvas.height=ch;
+    canvas.style.width=cw+'px';
+    canvas.style.height=ch+'px';
+  }
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!results.poseLandmarks){
     document.getElementById('detectBadge').textContent='인식 안됨';
@@ -527,6 +547,19 @@ function measureBody(lm){
   bodyRef.hipY=(lh.y+rh.y)/2;
   bodyRef.shoulderY=(ls.y+rs.y)/2;
   bodyRef.calibrated=true;
+}
+
+// 채점 중 bodyRef 동적 보정 (앞으로 와도 정확한 비율 유지)
+function updateBodyRef(lm){
+  const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24];
+  if(!ls||ls.visibility<0.4)return;
+  const alpha=0.04; // 느린 적응 (튀지 않게)
+  const liveSW=Math.max(d(ls,rs),0.05);
+  const liveHipY=(lh.y+rh.y)/2;
+  const liveShY=(ls.y+rs.y)/2;
+  bodyRef.shoulderW=bodyRef.shoulderW*(1-alpha)+liveSW*alpha;
+  bodyRef.hipY=bodyRef.hipY*(1-alpha)+liveHipY*alpha;
+  bodyRef.shoulderY=bodyRef.shoulderY*(1-alpha)+liveShY*alpha;
 }
 
 // ── 100점 만점 채점
@@ -587,29 +620,38 @@ function scoreLM(lm){
   }
   if(techPhase==='moving'){
     techPeakVel=Math.max(techPeakVel,smVel);
-    // 기술 중 최고 자세 포착 (각도가 가장 좋은 순간)
+    // 기술 중 최고 자세 포착
     const q=evalQ(avgLK,avgRK,avgLE,avgRE);
     if(q>techBestQ){
       techBestQ=q;
       techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
     }
+    // evalQ가 0이어도 항상 현재 각도 저장 (null 방지)
+    if(!techBestAngles){
+      techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
+    }
+    techSettleFrames=0;
     if(smVel<V_END&&techPeakVel>V_START){
       techPhase='settling';
     }
   }
   if(techPhase==='settling'){
-    if(smVel<0.8){
-      // 기술 완료 → 채점 (RAW 피크와 스무딩 피크 중 높은 값)
+    techSettleFrames=(techSettleFrames||0)+1;
+    // 완전히 멈추거나 타임아웃(25프레임) 시 채점
+    if(smVel<0.8||techSettleFrames>=25){
       const effectivePeak=Math.max(techPeakVel, rawPeakVel*0.85);
-      if(effectivePeak>4&&techBestAngles){
+      if(effectivePeak>3&&techBestAngles){
         const ts=scoreTech(techBestAngles,effectivePeak,lm,hipY,shY,sw);
         techHistory.push(ts);
         if(techHistory.length>TECH_MAX)techHistory.shift();
-        dbg('✅ 기술완료 v='+techPeakVel.toFixed(1)+' 서기:'+ts.stance+' 손:'+ts.arm+' 절도:'+ts.power);
+        dbg('✅ 기술완료 v='+effectivePeak.toFixed(1)+' 서기:'+ts.stance+' 손:'+ts.arm+' 절도:'+ts.power);
       }
-      techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;
+      techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;techSettleFrames=0;
     }
   }
+
+  // ── bodyRef 동적 보정 (앞으로 와도 정확한 비율)
+  if(bodyRef.calibrated) updateBodyRef(lm);
 
   // ── 발차기 감지
   const ankleY=Math.min(la.y,ra.y);
@@ -671,7 +713,7 @@ function scoreLM(lm){
   }
 
   // ── 비대칭 스무딩 (올라갈때 빠르게, 내려갈때 아주 느리게)
-  const smUp=0.22,smDown=0.025;
+  const smUp=0.30,smDown=0.02; // 올라갈 때 더 빠르게
   function sm(p,n){return n>p?p*(1-smUp)+n*smUp:p*(1-smDown)+n*smDown;}
   lastScore.stance=sm(lastScore.stance,stanceScore);
   lastScore.arm=sm(lastScore.arm,armScore);
@@ -688,13 +730,14 @@ function scoreLM(lm){
 function evalQ(lK,rK,lE,rE){
   const fK=Math.min(lK,rK),bK=Math.max(lK,rK);
   const extE=Math.max(lE,rE),retE=Math.min(lE,rE);
-  // 앞굽이 판정
-  const stQ=(fK>=120&&fK<=165)?1-(Math.abs(fK-140)/22):0;
-  // 팔 뻗기 판정
-  const armQ=extE>=150?(extE-150)/30:0;
-  // 당기기 판정
-  const retQ=retE<=120?(120-retE)/60:0;
-  return stQ*0.4+armQ*0.4+retQ*0.2;
+  // 서기: 무릎이 굽혀진 정도 (더 관대하게)
+  const stQ=fK>=100&&fK<=175?Math.max(0,1-Math.abs(fK-140)/40):0.3;
+  // 팔 뻗기: 조건 완화
+  const armQ=extE>=120?(extE-120)/60:0.2;
+  // 당기기: 조건 완화
+  const retQ=retE<=140?(140-retE)/80:0;
+  // 기본점 추가 (항상 최소 0.3 이상)
+  return Math.max(0.3, stQ*0.4+armQ*0.4+retQ*0.2);
 }
 
 // ── 참조 각도 기반 정확도 점수 계산
