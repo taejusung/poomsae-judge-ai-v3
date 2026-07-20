@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>품새 AI 심판 v3</title>
+<title>품새 AI 심판 v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -25,21 +25,15 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 .btn-gold{background:linear-gradient(135deg,#b45309,#d97706);color:#fff;}
 .btn-green{background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;}
 .btn-row{display:flex;gap:10px;}.btn-row .btn{flex:1;}
-.guide-steps{display:flex;flex-direction:column;gap:10px;}
-.guide-step{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);}
-.guide-icon{font-size:28px;flex-shrink:0;}
-.guide-text{display:flex;flex-direction:column;gap:2px;}
-.guide-title-t{font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;}
-.guide-desc{font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;}
 .camera-box{position:relative;width:100%;background:#000;border-radius:16px;overflow:hidden;border:2px solid #312e81;}
-#video{width:100%;height:auto;display:block;object-fit:fill;}
+#video{width:100%;height:auto;display:block;}
 #canvas{position:absolute;top:0;left:0;pointer-events:none;}
 .player-badge{position:absolute;top:10px;left:10px;z-index:10;background:rgba(0,0,0,0.75);border-radius:10px;padding:5px 12px;font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;border:1px solid rgba(99,102,241,0.5);}
 .detect-badge{position:absolute;top:10px;right:10px;z-index:10;padding:5px 12px;border-radius:10px;font-size:11px;background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;transition:all 0.3s;}
 .detect-badge.ok{background:rgba(74,222,128,0.3);border-color:#4ade80;color:#4ade80;}
 .detect-badge.frozen{background:rgba(251,191,36,0.3);border-color:#fbbf24;color:#fbbf24;}
-.kiai-badge{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);z-index:15;padding:8px 20px;border-radius:20px;background:rgba(251,191,36,0.9);color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;letter-spacing:2px;display:none;}
-.kick-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;padding:6px 16px;border-radius:20px;background:rgba(244,114,182,0.9);color:#fff;font-family:'Black Han Sans',sans-serif;font-size:13px;letter-spacing:1px;display:none;}
+.kiai-badge{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);z-index:15;padding:8px 20px;border-radius:20px;background:rgba(251,191,36,0.9);color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;letter-spacing:2px;opacity:0;pointer-events:none;transition:opacity 0.15s;}
+.kick-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;padding:6px 16px;border-radius:20px;background:rgba(244,114,182,0.9);color:#fff;font-family:'Black Han Sans',sans-serif;font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.15s;}
 #cam-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.93);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:100;padding:20px;gap:14px;}
 .loader{width:36px;height:36px;border:3px solid rgba(99,102,241,0.2);border-top-color:#818cf8;border-radius:50%;animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -55,7 +49,6 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 .freeze-bar{background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:10px;padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:#fbbf24;}
 .freeze-bar-fill{flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
 .freeze-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;transition:width 0.5s;}
-/* 100점 점수판 */
 .score-wrap{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;}
 .score-top{display:flex;justify-content:space-between;align-items:center;}
 .score-label{font-family:'Black Han Sans',sans-serif;font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:1px;}
@@ -72,7 +65,6 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 .kiai-bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;}
 .kiai-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b);width:0%;transition:width 0.1s;}
 .kiai-count{font-size:11px;color:#fbbf24;min-width:50px;text-align:right;}
-/* 조정 화면 */
 .adjust-header{background:rgba(99,102,241,0.1);border:1.5px solid rgba(99,102,241,0.4);border-radius:14px;padding:14px;text-align:center;display:flex;flex-direction:column;gap:4px;}
 .adjust-name{font-family:'Black Han Sans',sans-serif;font-size:15px;color:#c7d2fe;}
 .adjust-ai{font-family:'Black Han Sans',sans-serif;font-size:48px;background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
@@ -87,20 +79,12 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 .adj-btn:active{transform:scale(0.85);}
 .adj-plus{background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);}
 .adj-minus{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4);}
-.deduct-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.deduct-btn{padding:12px 8px;border-radius:12px;border:1.5px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);color:#fca5a5;font-family:'Black Han Sans',sans-serif;font-size:11px;cursor:pointer;transition:all 0.2s;text-align:center;user-select:none;}
-.deduct-btn:active{transform:scale(0.95);}
-.deduct-btn.on{background:rgba(239,68,68,0.3);border-color:#ef4444;}
-.deduct-num{font-size:22px;font-weight:700;display:block;margin-bottom:2px;color:#f87171;}
-/* 감점/가산 아이템 */
 .judge-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.08);}
 .judge-label{flex:1;display:flex;flex-direction:column;gap:2px;}
 .judge-name{font-family:'Black Han Sans',sans-serif;font-size:12px;color:rgba(255,255,255,0.7);}
 .judge-pts{font-size:10px;color:rgba(255,255,255,0.35);}
 .judge-val{font-family:'Black Han Sans',sans-serif;font-size:18px;min-width:32px;text-align:center;}
-.judge-val.pos{color:#4ade80;}
-.judge-val.neg{color:#f87171;}
-.judge-val.zero{color:rgba(255,255,255,0.4);}
+.judge-val.pos{color:#4ade80;}.judge-val.neg{color:#f87171;}.judge-val.zero{color:rgba(255,255,255,0.4);}
 .jbtn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
 .jbtn:active{transform:scale(0.85);}
 .jbtn-plus{background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);}
@@ -129,11 +113,12 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 </head>
 <body>
 <div class="wrap">
-  <div class="title">🥋 품새 AI 심판 v3</div>
+  <div class="title">🥋 품새 AI 심판</div>
+
   <select id="poomsaeSelect" onchange="currentPoomsae=this.value"
     style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);
     background:rgba(255,255,255,0.08);color:#fff;font-family:'Black Han Sans',sans-serif;
-    font-size:14px;margin-bottom:4px;outline:none;">
+    font-size:14px;outline:none;">
     <option value="태극4장">태극 4장 ★ 학습완료</option>
     <option value="태극5장">태극 5장</option>
     <option value="태극6장">태극 6장</option>
@@ -144,7 +129,7 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
     <option value="태백">태백</option>
   </select>
 
-  <!-- 화면1: 이름 입력 -->
+  <!-- 화면1 -->
   <div class="screen active" id="s1">
     <div class="card">
       <div class="card-title">선수 이름</div>
@@ -155,22 +140,38 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
     <div class="debug" id="dbg">준비 중...</div>
   </div>
 
-  <!-- 화면2: 촬영 가이드 -->
+  <!-- 화면2 -->
   <div class="screen" id="s2">
     <div class="card">
       <div class="card-title">촬영 전 확인사항</div>
-      <div class="guide-steps">
-        <div class="guide-step"><div class="guide-icon">📐</div><div class="guide-text"><div class="guide-title-t">3시 또는 9시 측면 촬영</div><div class="guide-desc">선수 정측면에서 촬영. 무릎/팔 각도, 발차기 높이가 2배 정확해요.</div></div></div>
-        <div class="guide-step"><div class="guide-icon">📏</div><div class="guide-text"><div class="guide-title-t">거리: 2~2.5m (전신 다 보이게)</div><div class="guide-desc">바닥에 테이프로 거리 표시 권장. 너무 가까우면 발이 잘립니다.</div></div></div>
-        <div class="guide-step"><div class="guide-icon">💡</div><div class="guide-text"><div class="guide-title-t">밝은 곳 / 역광 금지</div><div class="guide-desc">선수 앞쪽에서 빛이 와야 인식률이 높아요.</div></div></div>
-        <div class="guide-step"><div class="guide-icon">🎤</div><div class="guide-text"><div class="guide-title-t">마이크 권한 허용 (기합 감지)</div><div class="guide-desc">기합 1회당 +1점, 최대 +5점 가산됩니다.</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;">
+          <span style="font-size:28px">📐</span>
+          <div><div style="font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;">정면 촬영 (심판 시점)</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;">선수 정면에서 촬영. 심판이 보는 각도와 동일하게.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;">
+          <span style="font-size:28px">📏</span>
+          <div><div style="font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;">거리: 2~3m (전신 다 보이게)</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;">짐벌 고정 후 선수가 움직여요. 카메라는 제자리.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;">
+          <span style="font-size:28px">💡</span>
+          <div><div style="font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;">밝은 곳 / 역광 금지</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;">선수 앞쪽에서 빛이 와야 인식률이 높아요.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px 14px;">
+          <span style="font-size:28px">🎤</span>
+          <div><div style="font-family:'Black Han Sans',sans-serif;font-size:13px;color:#c7d2fe;">마이크 허용 (기합 감지)</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.6;">기합 1회당 +1점, 최대 +5점.</div></div>
+        </div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="startMeasure()">📷 카메라 시작</button>
     <button class="btn btn-secondary" onclick="showScreen('s1')">← 뒤로</button>
   </div>
 
-  <!-- 화면3: 측정 -->
+  <!-- 화면3 -->
   <div class="screen" id="s3">
     <div class="camera-box">
       <video id="video" autoplay playsinline muted></video>
@@ -180,7 +181,7 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
       <div class="kiai-badge" id="kiaiBadge">⚡ 기합!</div>
       <div class="kick-badge" id="kickBadge">🦵 발차기!</div>
       <div id="lockOverlay" style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;z-index:20;">
-        <button onclick="lockPerson()" style="padding:10px 28px;border-radius:50px;background:rgba(251,191,36,0.92);border:none;color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;animation:pulse 1s ease-in-out infinite;">📌 이 선수 고정</button>
+        <button onclick="lockPerson()" style="padding:10px 28px;border-radius:50px;background:rgba(251,191,36,0.92);border:none;color:#000;font-family:'Black Han Sans',sans-serif;font-size:14px;cursor:pointer;animation:pulse 1s ease-in-out infinite;">📌 선수 고정</button>
       </div>
       <div id="calibOverlay">
         <div class="calib-title">🧍 체형 보정 중</div>
@@ -190,24 +191,20 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
       </div>
       <div id="cam-overlay">
         <div class="loader"></div>
-        <div class="cam-txt" id="camTxt">AI 엔진 로딩 중...</div>
-        <div class="cam-sub" id="camSub">MediaPipe 모델 준비 중</div>
+        <div class="cam-txt" id="camTxt">AI 로딩 중...</div>
+        <div class="cam-sub" id="camSub">MediaPipe 준비 중</div>
       </div>
     </div>
-
-    <!-- 동결 진행 바 -->
     <div class="freeze-bar" id="freezeBar" style="display:none">
       <span>⏱ 채점 보호</span>
       <div class="freeze-bar-fill"><div class="freeze-fill" id="freezeFill" style="width:0%"></div></div>
       <span id="freezeLabel">0초</span>
     </div>
-
     <div class="btn-row" id="measureBtns" style="display:none">
       <button class="btn btn-green" id="calibBtn" onclick="startCalib()">🧍 체형 보정</button>
       <button class="btn btn-primary" id="startBtn" onclick="startScoring()" style="display:none">▶ 채점 시작</button>
       <button class="btn btn-danger" id="stopBtn" onclick="stopMeasure()" style="display:none">🛑 종료</button>
     </div>
-
     <div class="score-wrap">
       <div class="score-top">
         <div class="score-label" id="scoringLabel">선수 고정 → 체형 보정 → 채점 시작</div>
@@ -225,32 +222,32 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
         <div class="score-box"><div class="score-box-label">정확성 — 서기</div><div class="score-box-val" id="sStance">-</div><div class="score-box-max">/ 20점</div></div>
         <div class="score-box"><div class="score-box-label">정확성 — 손기술</div><div class="score-box-val" id="sArm">-</div><div class="score-box-max">/ 20점</div></div>
         <div class="score-box"><div class="score-box-label">정확성 — 자세</div><div class="score-box-val" id="sPosture">-</div><div class="score-box-max">/ 20점</div></div>
-        <div class="score-box"><div class="score-box-label">표현력 — 절도+발차기</div><div class="score-box-val" id="sPower">-</div><div class="score-box-max">/ 20점</div></div>
+        <div class="score-box"><div class="score-box-label">표현력 — 절도</div><div class="score-box-val" id="sPower">-</div><div class="score-box-max">/ 20점</div></div>
         <div class="score-box"><div class="score-box-label">표현력 — 균형</div><div class="score-box-val" id="sBalance">-</div><div class="score-box-max">/ 10점</div></div>
         <div class="score-box"><div class="score-box-label">표현력 — 리듬</div><div class="score-box-val" id="sRhythm">-</div><div class="score-box-max">/ 10점</div></div>
       </div>
     </div>
   </div>
 
-  <!-- 화면4: 채점 조정 -->
+  <!-- 화면4 -->
   <div class="screen" id="s4">
     <div class="adjust-header">
       <div class="adjust-name" id="adjName"></div>
       <div class="adjust-ai" id="adjAI">0</div>
-      <div class="adjust-sub" id="adjSub">AI 측정 점수 / 100점 만점</div>
+      <div class="adjust-sub" id="adjSub">AI 측정 / 100점 만점</div>
     </div>
     <div class="card">
-      <div class="card-title">항목별 조정 (+ 가점 / − 감점, 1점 단위)</div>
+      <div class="card-title">항목별 조정 (1점 단위)</div>
       <div class="adjust-list" id="adjustList"></div>
     </div>
     <div class="card">
-      <div class="card-title">감점 / 가산점 (− 감점 | + 가산)</div>
+      <div class="card-title">감점 / 가산점</div>
       <div style="display:flex;flex-direction:column;gap:8px;" id="judgeItems"></div>
     </div>
     <div class="final-summary">
       <div class="final-row"><span class="final-row-label">AI 측정</span><span class="final-row-val" id="sumAI" style="color:#a5b4fc">0</span></div>
       <div class="final-row"><span class="final-row-label">사범 조정</span><span class="final-row-val" id="sumAdj" style="color:#4ade80">+0</span></div>
-      <div class="final-row"><span class="final-row-label">감점/가산 합계</span><span class="final-row-val" id="sumDeduct" style="color:#f87171">0</span></div>
+      <div class="final-row"><span class="final-row-label">감점/가산</span><span class="final-row-val" id="sumDeduct">0</span></div>
       <div class="final-total-row"><span class="final-total-label">최종 점수</span><span class="final-total-val" id="sumFinal">0</span></div>
     </div>
     <div class="btn-row">
@@ -259,7 +256,7 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
     </div>
   </div>
 
-  <!-- 화면5: 순위 -->
+  <!-- 화면5 -->
   <div class="screen" id="s5">
     <div class="rank-title">🏆 최종 순위</div>
     <div class="rank-list" id="rankList"></div>
@@ -274,66 +271,73 @@ body{background:#080c14;color:#fff;font-family:'Noto Sans KR',sans-serif;min-hei
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <script>
-const video=document.getElementById('video');
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
-
-// ── 태극4장 학습 데이터 (3개 영상 학습)
+// ══════════════════════════════════════════════════════
+// ── 태극4장 학습 데이터
+// ══════════════════════════════════════════════════════
 const REFERENCE_ANGLES = {
   '태극4장': {
-    left_knee:      {mean:149.89, std:15.0, min:134.48, max:164.26},
-    right_knee:     {mean:150.25, std:15.0, min:129.64, max:170.12},
-    left_elbow:     {mean:128.96, std:18.0, min:114.7,  max:137.74},
-    right_elbow:    {mean:137.33, std:18.0, min:131.96, max:140.31},
-    shoulder_tilt:  {mean:0.03,   std:0.02, min:0.02,   max:0.03},
-    hip_tilt:       {mean:0.04,   std:0.03, min:0.02,   max:0.09},
-    spine_lean:     {mean:0.03,   std:0.02, min:0.01,   max:0.05},
+    left_knee:     {mean:149.89, std:15.0},
+    right_knee:    {mean:150.25, std:15.0},
+    left_elbow:    {mean:128.96, std:18.0},
+    right_elbow:   {mean:137.33, std:18.0},
+    shoulder_tilt: {mean:0.03,   std:0.02},
+    hip_tilt:      {mean:0.04,   std:0.03},
   }
-  // 나머지 품새는 학습 후 추가 예정
 };
 
-let currentPoomsae = '태극4장'; // 현재 선택된 품새
+// ══════════════════════════════════════════════════════
+// ── 전역 변수 (전부 선언)
+// ══════════════════════════════════════════════════════
+const video  = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
 
-let poseInst=null,isRunning=false,isScoring=false,isLocked=false,isCalibrating=false,isCalibDone=false,currentName='';
+let currentPoomsae = '태극4장';
+let poseInst = null;
+let isRunning = false, isScoring = false, isLocked = false;
+let isCalibrating = false, currentName = '';
 
 // 체형 기준
-let bodyRef={shoulderW:0.18,armLen:0.25,legLen:0.4,torsoH:0.3,hipY:0.5,shoulderY:0.3,calibrated:false};
+let bodyRef = {shoulderW:0.18, hipY:0.5, shoulderY:0.3, calibrated:false};
 
-// 각도 이력 (10프레임)
-const HIST=10;
-let aH={lKnee:[],rKnee:[],lElbow:[],rElbow:[]};
-let prevAng={lKnee:135,rKnee:135,lElbow:160,rElbow:160};
+// 각도 이력
+const HIST = 12;
+let aH = {lKnee:[], rKnee:[], lElbow:[], rElbow:[]};
+let prevAng = {lKnee:135, rKnee:135, lElbow:160, rElbow:160};
 
-// 점수 누적
-let sA={stance:[],arm:[],posture:[],power:[],balance:[],rhythm:[]};
-// 동결용 피크 점수
-let peakScore={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
-let lastScore={stance:16,arm:16,posture:16,power:14,balance:8,rhythm:8};
-let isFrozen=false,scoringStartTime=null,frozenAt=null;
-let prevLM=null,motionHist=[],frameSince=0;
+// ── 기술 감지 상태머신
+const TECH_MAX = 30;
+let techHistory    = [];   // 완료된 기술 점수 이력
+let techPhase      = 'idle'; // idle | moving | settling
+let techPeakVel    = 0;
+let rawPeakVel     = 0;
+let techBestAngles = null;
+let techBestQ      = 0;
+let techSettleFrames = 0;
+let velBuf         = [];   // 각속도 스무딩 버퍼
+
+// 점수
+let lastScore = {stance:0, arm:0, posture:14, power:0, balance:8, rhythm:0};
+let peakScore = {stance:0, arm:0, posture:0,  power:0, balance:0, rhythm:0};
+let isFrozen = false, scoringStartTime = null, frozenAt = null;
+
+// 움직임
+let prevLM = null, motionHist = [], frameSince = 0;
 
 // 발차기
-let kickDetected=false,kickCooldown=false,kickHeight=0;
-let maxKickHeight=0; // 측정 중 최대 발차기 높이
+let kickDetected = false, kickCooldown = false, kickHeight = 0, maxKickHeight = 0;
 
 // 기합
-let kiaiCount=0,audioCtx=null,analyser=null,micStream=null,kiaiCooldown=false,kiaiVolHist=[];
+let kiaiCount = 0, audioCtx = null, analyser = null, micStream = null;
+let kiaiCooldown = false, kiaiVolHist = [];
 
-// 점수 저장
-let aiScoreData={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0,kiai:0,total:0};
-let adjustments={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
-let deductCounts=[0,0,0,0]; // legacy
-// 감점/가산 시스템
-const JUDGE_ITEMS=[
-  {id:'j0', name:'절도',   minus:-1, plus:+1, minusLabel:'절도 미숙 -1점', plusLabel:'절도 우수 +1점'},
-  {id:'j1', name:'자세',   minus:-2, plus:+2, minusLabel:'자세 미숙 -2점', plusLabel:'자세 우수 +2점'},
-  {id:'j2', name:'기합',   minus:-3, plus:+3, minusLabel:'기합 감점 -3점', plusLabel:'기합 가산 +3점'},
-  {id:'j3', name:'동작',   minus:-5, plus:+5, minusLabel:'동작 틀림 -5점', plusLabel:'동작 완벽 +5점'},
-];
-let judgeScores={j0:0,j1:0,j2:0,j3:0};
-let players=[];
+// 채점 결과
+let aiScoreData = {stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0,kiai:0,total:0};
+let adjustments = {stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
+let judgeScores = {j0:0,j1:0,j2:0,j3:0};
+let players = [];
 
-const ITEMS=[
+const ITEMS = [
   {key:'stance', label:'정확성 — 서기',       max:20},
   {key:'arm',    label:'정확성 — 손기술',     max:20},
   {key:'posture',label:'정확성 — 자세',       max:20},
@@ -341,77 +345,84 @@ const ITEMS=[
   {key:'balance',label:'표현력 — 균형',       max:10},
   {key:'rhythm', label:'표현력 — 리듬',       max:10},
 ];
+const JUDGE_ITEMS = [
+  {id:'j0',name:'절도',minus:-1,plus:+1,ml:'절도 미숙 -1점',pl:'절도 우수 +1점'},
+  {id:'j1',name:'자세',minus:-2,plus:+2,ml:'자세 미숙 -2점',pl:'자세 우수 +2점'},
+  {id:'j2',name:'기합',minus:-3,plus:+3,ml:'기합 감점 -3점',pl:'기합 가산 +3점'},
+  {id:'j3',name:'동작',minus:-5,plus:+5,ml:'동작 틀림 -5점',pl:'동작 완벽 +5점'},
+];
 
-// ── 흐름
+// ══════════════════════════════════════════════════════
+// ── 흐름 제어
+// ══════════════════════════════════════════════════════
 function goGuide(){
   const name=document.getElementById('nameInput').value.trim();
   if(!name){alert('이름을 입력해주세요!');return;}
-  currentName=name;showScreen('s2');
+  currentName=name; showScreen('s2');
 }
 
 async function startMeasure(){
   showScreen('s3');
-  document.getElementById('playerBadge').textContent=currentName+' 선수';
-  document.getElementById('detectBadge').textContent='인식 대기';
-  document.getElementById('detectBadge').className='detect-badge';
-  document.getElementById('lockOverlay').style.display='flex';
-  document.getElementById('measureBtns').style.display='none';
-  document.getElementById('calibBtn').style.display='';
-  document.getElementById('startBtn').style.display='none';
-  document.getElementById('stopBtn').style.display='none';
-  document.getElementById('freezeBar').style.display='none';
-  document.getElementById('liveTotal').textContent='-';
-  ['sStance','sArm','sPosture','sPower','sBalance','sRhythm'].forEach(id=>document.getElementById(id).textContent='-');
-  kiaiCount=0;maxKickHeight=0;updateKiaiUI();
-  isFrozen=false;scoringStartTime=null;
-  techHistory=[];techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;techSettleFrames=0;
-  velBuf=[];
+  document.getElementById('playerBadge').textContent = currentName+' 선수';
+  document.getElementById('detectBadge').textContent = '인식 대기';
+  document.getElementById('detectBadge').className   = 'detect-badge';
+  document.getElementById('lockOverlay').style.display = 'flex';
+  document.getElementById('measureBtns').style.display = 'none';
+  document.getElementById('startBtn').style.display    = 'none';
+  document.getElementById('stopBtn').style.display     = 'none';
+  document.getElementById('freezeBar').style.display   = 'none';
+  document.getElementById('liveTotal').textContent     = '-';
+  ['sStance','sArm','sPosture','sPower','sBalance','sRhythm']
+    .forEach(id=>document.getElementById(id).textContent='-');
+
+  // ── 전체 상태 초기화
+  kiaiCount=0; maxKickHeight=0; updateKiaiUI();
+  isFrozen=false; scoringStartTime=null; frozenAt=null;
+  techHistory=[]; techPhase='idle'; techPeakVel=0; rawPeakVel=0;
+  techBestAngles=null; techBestQ=0; techSettleFrames=0; velBuf=[];
   lastScore={stance:0,arm:0,posture:14,power:0,balance:8,rhythm:0};
   peakScore={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
-  prevLM=null;motionHist=[];frameSince=0;
+  prevLM=null; motionHist=[]; frameSince=0;
   Object.keys(aH).forEach(k=>aH[k]=[]);
   prevAng={lKnee:135,rKnee:135,lElbow:160,rElbow:160};
-  isCalibDone=false;bodyRef.calibrated=false;
+  kickDetected=false; kickCooldown=false; kickHeight=0;
+  bodyRef={shoulderW:0.18,hipY:0.5,shoulderY:0.3,calibrated:false};
 
   setCam('카메라 연결 중...','');
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}}});
+    const stream=await navigator.mediaDevices.getUserMedia(
+      {video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}}});
     video.srcObject=stream;
     await new Promise(r=>{video.onloadedmetadata=r;});
     video.play();
+    // 비디오 재생 시작되면 canvas 즉시 동기화
+    video.addEventListener('play', syncCanvas, {once:false});
   }catch(e){setCam('❌ 카메라 권한 없음','설정에서 카메라를 허용해주세요');return;}
 
-  // 마이크
   try{
     const ms=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
     micStream=ms;
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
     const src=audioCtx.createMediaStreamSource(ms);
-    analyser=audioCtx.createAnalyser();analyser.fftSize=256;
-    src.connect(analyser);
-    startKiai();
+    analyser=audioCtx.createAnalyser(); analyser.fftSize=256;
+    src.connect(analyser); startKiai();
   }catch(e){dbg('⚠️ 마이크 없음');}
 
   if(!poseInst){
     setCam('MediaPipe 로딩 중...','처음 20~30초 소요');
-    await waitLibs();await initPose();
+    await waitLibs(); await initPose();
   }
   if(!poseInst){setCam('❌ AI 로드 실패','새로고침');return;}
   document.getElementById('cam-overlay').style.display='none';
-  // ── ResizeObserver: video 크기 변할 때마다 canvas 동기화
-  if(window._roObs) window._roObs.disconnect();
-  window._roObs = new ResizeObserver(()=>{
-    const r=video.getBoundingClientRect();
-    if(r.width>0&&r.height>0){
-      canvas.width=Math.round(r.width);
-      canvas.height=Math.round(r.height);
-      canvas.style.width=Math.round(r.width)+'px';
-      canvas.style.height=Math.round(r.height)+'px';
-    }
-  });
-  window._roObs.observe(video);
 
-  isRunning=true;isLocked=false;isScoring=false;
+  // ── ResizeObserver: video 크기 변경 시 canvas 자동 동기화
+  if(window._ro) window._ro.disconnect();
+  window._ro = new ResizeObserver(syncCanvas);
+  window._ro.observe(video);
+  // 초기 동기화
+  syncCanvas();
+
+  isRunning=true; isLocked=false; isScoring=false;
   loop();
 }
 
@@ -419,7 +430,7 @@ function lockPerson(){
   isLocked=true;
   document.getElementById('lockOverlay').style.display='none';
   document.getElementById('measureBtns').style.display='flex';
-  dbg('📌 고정 완료');
+  dbg('📌 선수 고정 완료');
 }
 
 function startCalib(){
@@ -432,159 +443,181 @@ function startCalib(){
   const iv=setInterval(()=>{
     prog+=100/30;
     document.getElementById('calibFill').style.width=Math.min(prog,100)+'%';
-    if(prog>=33)document.getElementById('calibCount').textContent=2;
-    if(prog>=66)document.getElementById('calibCount').textContent=1;
+    if(prog>=33) document.getElementById('calibCount').textContent=2;
+    if(prog>=66) document.getElementById('calibCount').textContent=1;
     if(prog>=100){
       clearInterval(iv);
-      isCalibrating=false;isCalibDone=true;
+      isCalibrating=false;
       document.getElementById('calibOverlay').style.display='none';
       document.getElementById('startBtn').style.display='';
-      document.getElementById('scoringLabel').textContent='보정 완료! 채점 시작 버튼을 누르세요';
+      document.getElementById('scoringLabel').textContent='보정 완료! 채점 시작을 누르세요';
       dbg('✅ 체형 보정 완료');
     }
   },100);
 }
 
 function startScoring(){
-  isScoring=true;isFrozen=false;
+  isScoring=true; isFrozen=false;
   scoringStartTime=Date.now();
-  frameSince=0;motionHist=[];
+  frameSince=0; motionHist=[];
   document.getElementById('startBtn').style.display='none';
   document.getElementById('stopBtn').style.display='';
   document.getElementById('freezeBar').style.display='flex';
   document.getElementById('scoringLabel').textContent='채점 중...';
-  // 10초 카운트다운 UI
   updateFreezeBar();
   dbg('▶ 채점 시작!');
 }
 
 function updateFreezeBar(){
-  if(!scoringStartTime||!isScoring)return;
-  const elapsed=(Date.now()-scoringStartTime)/1000;
-  const pct=Math.min(elapsed/10*100,100);
-  document.getElementById('freezeFill').style.width=pct+'%';
-  document.getElementById('freezeLabel').textContent=elapsed>=10?'✅ 보호됨':Math.ceil(10-elapsed)+'초';
-  if(elapsed<10&&isScoring) setTimeout(updateFreezeBar,500);
+  if(!scoringStartTime||!isScoring) return;
+  const e=(Date.now()-scoringStartTime)/1000;
+  document.getElementById('freezeFill').style.width=Math.min(e/10*100,100)+'%';
+  document.getElementById('freezeLabel').textContent=e>=10?'✅ 보호됨':Math.ceil(10-e)+'초';
+  if(e<10&&isScoring) setTimeout(updateFreezeBar,500);
 }
 
+// ══════════════════════════════════════════════════════
 // ── 기합 감지
+// ══════════════════════════════════════════════════════
 function startKiai(){
-  if(!analyser)return;
+  if(!analyser) return;
   const buf=new Uint8Array(analyser.frequencyBinCount);
   const det=()=>{
-    if(!isRunning)return;
+    if(!isRunning) return;
     analyser.getByteFrequencyData(buf);
     const vol=buf.reduce((a,b)=>a+b,0)/buf.length;
     document.getElementById('kiaiFill').style.width=Math.min(vol/80*100,100)+'%';
-    kiaiVolHist.push(vol);if(kiaiVolHist.length>5)kiaiVolHist.shift();
+    kiaiVolHist.push(vol); if(kiaiVolHist.length>5) kiaiVolHist.shift();
     if(vol>45&&!kiaiCooldown&&kiaiVolHist.length>=3&&isScoring){
       const prev=kiaiVolHist.slice(0,-1).reduce((a,b)=>a+b,0)/(kiaiVolHist.length-1);
       if(vol>prev*1.7){
         kiaiCount=Math.min(kiaiCount+1,5);
-        updateKiaiUI();showBadge('kiaiBadge');
-        kiaiCooldown=true;setTimeout(()=>kiaiCooldown=false,1500);
+        updateKiaiUI(); showBadge('kiaiBadge');
+        kiaiCooldown=true; setTimeout(()=>kiaiCooldown=false,1500);
       }
     }
     requestAnimationFrame(det);
-  };det();
+  }; det();
 }
 function updateKiaiUI(){
   document.getElementById('kiaiCount').textContent=kiaiCount+'회 (+'+kiaiCount+'점)';
 }
 
-// ── Pose
+// ══════════════════════════════════════════════════════
+// ── MediaPipe
+// ══════════════════════════════════════════════════════
 async function initPose(){
   try{
-    const pose=new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-    pose.setOptions({modelComplexity:1,smoothLandmarks:true,enableSegmentation:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+    const pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+    pose.setOptions({modelComplexity:1,smoothLandmarks:true,
+      enableSegmentation:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
     pose.onResults(onResults);
-    poseInst=pose;dbg('✅ MediaPipe 준비');return true;
-  }catch(e){dbg('❌:'+e.message);return false;}
+    poseInst=pose; dbg('✅ MediaPipe 준비'); return true;
+  }catch(e){dbg('❌:'+e.message); return false;}
 }
+
 async function loop(){
-  if(!isRunning)return;
-  if(video.readyState>=2&&poseInst)try{await poseInst.send({image:video});}catch(e){}
-  if(isRunning)requestAnimationFrame(loop);
+  if(!isRunning) return;
+  if(video.readyState>=2&&poseInst) try{await poseInst.send({image:video});}catch(e){}
+  if(isRunning) requestAnimationFrame(loop);
+}
+
+// ── canvas ↔ video 크기 동기화 (독립 함수)
+function syncCanvas(){
+  // requestAnimationFrame 안에서 측정해야 레이아웃이 안정된 후 값을 얻음
+  requestAnimationFrame(()=>{
+    const rect=video.getBoundingClientRect();
+    if(rect.width<=0||rect.height<=0) return;
+    const cw=Math.round(rect.width);
+    const ch=Math.round(rect.height);
+    if(canvas.width!==cw||canvas.height!==ch){
+      canvas.width=cw;
+      canvas.height=ch;
+      canvas.style.width=cw+'px';
+      canvas.style.height=ch+'px';
+      canvas.style.top='0';
+      canvas.style.left='0';
+    }
+  });
 }
 
 function onResults(results){
-  // ── canvas를 video 실제 표시 크기에 정확히 동기화
+  // 매 프레임 canvas 동기화 (rAF 없이 직접 측정)
   const rect=video.getBoundingClientRect();
-  const cw=rect.width>0?Math.round(rect.width):video.videoWidth||640;
-  const ch=rect.height>0?Math.round(rect.height):video.videoHeight||480;
-  if(canvas.width!==cw||canvas.height!==ch){
-    canvas.width=cw;
-    canvas.height=ch;
-    canvas.style.width=cw+'px';
-    canvas.style.height=ch+'px';
+  if(rect.width>0&&rect.height>0){
+    const cw=Math.round(rect.width), ch=Math.round(rect.height);
+    if(canvas.width!==cw||canvas.height!==ch){
+      canvas.width=cw; canvas.height=ch;
+      canvas.style.width=cw+'px'; canvas.style.height=ch+'px';
+      canvas.style.top='0'; canvas.style.left='0';
+    }
   }
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!results.poseLandmarks){
-    document.getElementById('detectBadge').textContent='인식 안됨';
-    document.getElementById('detectBadge').className='detect-badge';
-    return;
-  }
-  const lm=results.poseLandmarks;
+
   const badge=document.getElementById('detectBadge');
+  if(!results.poseLandmarks){
+    badge.textContent='인식 안됨'; badge.className='detect-badge'; return;
+  }
+
+  const lm=results.poseLandmarks;
   if(isFrozen){badge.textContent='❄️ 점수 동결';badge.className='detect-badge frozen';}
   else{badge.textContent='✅ 인식됨';badge.className='detect-badge ok';}
 
   drawConnectors(ctx,lm,POSE_CONNECTIONS,{color:'rgba(129,140,248,0.85)',lineWidth:3});
   drawLandmarks(ctx,lm,{color:'#c084fc',lineWidth:1,radius:4});
 
-  if(isCalibrating)measureBody(lm);
-  if(isRunning&&isScoring)scoreLM(lm);
-  if(isScoring)updateLiveUI();
+  if(isCalibrating) calibrateBody(lm);
+  if(isRunning&&isScoring){ scoreLM(lm); updateLiveUI(); }
 }
 
-function measureBody(lm){
-  const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24],la=lm[27],ra=lm[28],lw=lm[15],rw=lm[16];
-  if(!ls||ls.visibility<0.5)return;
-  bodyRef.shoulderW=Math.max(d(ls,rs),0.05);
-  bodyRef.torsoH=Math.max(d(mid(ls,rs),mid(lh,rh)),0.05);
-  bodyRef.legLen=Math.max((d(lh,la)+d(rh,ra))/2,0.1);
-  bodyRef.armLen=Math.max((d(ls,lw)+d(rs,rw))/2,0.1);
-  bodyRef.hipY=(lh.y+rh.y)/2;
-  bodyRef.shoulderY=(ls.y+rs.y)/2;
-  bodyRef.calibrated=true;
-}
-
-// 채점 중 bodyRef 동적 보정 (앞으로 와도 정확한 비율 유지)
-function updateBodyRef(lm){
+// ══════════════════════════════════════════════════════
+// ── 체형 보정
+// ══════════════════════════════════════════════════════
+function calibrateBody(lm){
   const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24];
-  if(!ls||ls.visibility<0.4)return;
-  const alpha=0.04; // 느린 적응 (튀지 않게)
-  const liveSW=Math.max(d(ls,rs),0.05);
-  const liveHipY=(lh.y+rh.y)/2;
-  const liveShY=(ls.y+rs.y)/2;
-  bodyRef.shoulderW=bodyRef.shoulderW*(1-alpha)+liveSW*alpha;
-  bodyRef.hipY=bodyRef.hipY*(1-alpha)+liveHipY*alpha;
-  bodyRef.shoulderY=bodyRef.shoulderY*(1-alpha)+liveShY*alpha;
+  if(!ls||ls.visibility<0.5) return;
+  bodyRef.shoulderW = Math.max(dst(ls,rs),0.05);
+  bodyRef.hipY      = (lh.y+rh.y)/2;
+  bodyRef.shoulderY = (ls.y+rs.y)/2;
+  bodyRef.calibrated= true;
 }
 
-// ── 100점 만점 채점
-// 기본점 0 → 동작할수록 올라가는 방식
-// 평균 65~72 / 잘하면 85~92 / 최상위 95+
+// 채점 중 bodyRef 동적 보정 (앞으로 와도 비율 유지)
+function adaptBodyRef(lm){
+  const ls=lm[11],rs=lm[12],lh=lm[23],rh=lm[24];
+  if(!ls||ls.visibility<0.4) return;
+  const a=0.04;
+  bodyRef.shoulderW = bodyRef.shoulderW*(1-a)+Math.max(dst(ls,rs),0.05)*a;
+  bodyRef.hipY      = bodyRef.hipY*(1-a)+((lh.y+rh.y)/2)*a;
+  bodyRef.shoulderY = bodyRef.shoulderY*(1-a)+((ls.y+rs.y)/2)*a;
+}
+
+// ══════════════════════════════════════════════════════
+// ── 채점 엔진
+// ══════════════════════════════════════════════════════
 function scoreLM(lm){
   const ls=lm[11],rs=lm[12],le=lm[13],re=lm[14];
   const lw=lm[15],rw=lm[16],lh=lm[23],rh=lm[24];
   const lk=lm[25],rk=lm[26],la=lm[27],ra=lm[28];
-  if(!ls||!rs||ls.visibility<0.35)return;
+  if(!ls||!rs||ls.visibility<0.35) return;
 
-  const sw=bodyRef.calibrated?bodyRef.shoulderW:Math.max(d(ls,rs),0.05);
-  const hipY=bodyRef.calibrated?bodyRef.hipY:(lh.y+rh.y)/2;
-  const shY=bodyRef.calibrated?bodyRef.shoulderY:(ls.y+rs.y)/2;
+  const sw   = bodyRef.calibrated?bodyRef.shoulderW:Math.max(dst(ls,rs),0.05);
+  const hipY = bodyRef.calibrated?bodyRef.hipY:(lh.y+rh.y)/2;
+  const shY  = bodyRef.calibrated?bodyRef.shoulderY:(ls.y+rs.y)/2;
 
-  // ── 움직임 측정
+  // bodyRef 동적 보정
+  if(bodyRef.calibrated) adaptBodyRef(lm);
+
+  // 움직임
   let motion=0;
   if(prevLM){
-    motion=d(lw,prevLM[15])+d(rw,prevLM[16])+d(lk,prevLM[25])*0.5+d(rk,prevLM[26])*0.5;
-    motionHist.push(motion);if(motionHist.length>30)motionHist.shift();
-    if(motion>0.005)frameSince=0;else frameSince++;
+    motion=dst(lw,prevLM[15])+dst(rw,prevLM[16])+dst(lk,prevLM[25])*0.5+dst(rk,prevLM[26])*0.5;
+    motionHist.push(motion); if(motionHist.length>30) motionHist.shift();
+    if(motion>0.005) frameSince=0; else frameSince++;
   }
   prevLM=lm;
 
-  // ── 10초 보호 + 동결
+  // 10초 동결
   const elapsed=scoringStartTime?(Date.now()-scoringStartTime)/1000:0;
   if(elapsed>10&&frameSince>=18){
     if(!isFrozen){isFrozen=true;frozenAt={...lastScore};dbg('❄️ 점수 동결!');}
@@ -592,184 +625,155 @@ function scoreLM(lm){
   }
   if(elapsed<=10&&frameSince>=18){dbg('⏱ 대기 (10초 보호)');return;}
 
-  // ── 관절 각도 (15프레임 이력 평균)
-  const lKA=a3(lh,lk,la),rKA=a3(rh,rk,ra);
-  const lEA=a3(ls,le,lw),rEA=a3(rs,re,rw);
-  pushH('lKnee',lKA);pushH('rKnee',rKA);
-  pushH('lElbow',lEA);pushH('rElbow',rEA);
-  const avgLK=avgH('lKnee'),avgRK=avgH('rKnee');
-  const avgLE=avgH('lElbow'),avgRE=avgH('rElbow');
+  // 각도 계산
+  const lKA=ang(lh,lk,la), rKA=ang(rh,rk,ra);
+  const lEA=ang(ls,le,lw), rEA=ang(rs,re,rw);
+  pushH('lKnee',lKA); pushH('rKnee',rKA);
+  pushH('lElbow',lEA); pushH('rElbow',rEA);
+  const avgLK=avgH('lKnee'), avgRK=avgH('rKnee');
+  const avgLE=avgH('lElbow'), avgRE=avgH('rElbow');
 
-  // ── 각속도 (5프레임 스무딩)
-  const lKV=Math.abs(lKA-prevAng.lKnee),rKV=Math.abs(rKA-prevAng.rKnee);
-  const lEV=Math.abs(lEA-prevAng.lElbow),rEV=Math.abs(rEA-prevAng.rElbow);
+  // 각속도
+  const lKV=Math.abs(lKA-prevAng.lKnee), rKV=Math.abs(rKA-prevAng.rKnee);
+  const lEV=Math.abs(lEA-prevAng.lElbow), rEV=Math.abs(rEA-prevAng.rElbow);
   const rawVel=(lEV+rEV)*0.7+(lKV+rKV)*0.3;
   prevAng={lKnee:lKA,rKnee:rKA,lElbow:lEA,rElbow:rEA};
-  // RAW 피크 별도 추적 (스무딩 전)
-  rawPeakVel=techPhase==='moving'?Math.max(rawPeakVel,rawVel):rawPeakVel;
-  velBuf.push(rawVel);if(velBuf.length>3)velBuf.shift();
+
+  // RAW 피크 추적
+  if(techPhase==='moving') rawPeakVel=Math.max(rawPeakVel,rawVel);
+  velBuf.push(rawVel); if(velBuf.length>3) velBuf.shift();
   const smVel=velBuf.reduce((a,b)=>a+b,0)/velBuf.length;
 
-  // ── 기술 상태 머신 (핵심 개선)
-  // idle → (smVel>3.5) → moving → (smVel<1.5 after peak) → settling → score → idle
-  const V_START=2.5, V_END=1.2; // 빠른 전문가 동작 감지 강화
+  // ── 기술 상태 머신
+  const V_START=2.5, V_END=1.2;
   if(techPhase==='idle'&&smVel>V_START){
-    techPhase='moving';
-    techPeakVel=smVel;
-    techBestAngles=null;techBestQ=0;
+    techPhase='moving'; techPeakVel=smVel;
+    techBestAngles=null; techBestQ=0;
   }
   if(techPhase==='moving'){
     techPeakVel=Math.max(techPeakVel,smVel);
-    // 기술 중 최고 자세 포착
     const q=evalQ(avgLK,avgRK,avgLE,avgRE);
-    if(q>techBestQ){
-      techBestQ=q;
-      techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
-    }
-    // evalQ가 0이어도 항상 현재 각도 저장 (null 방지)
-    if(!techBestAngles){
-      techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
-    }
+    if(q>techBestQ){ techBestQ=q; techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE}; }
+    if(!techBestAngles) techBestAngles={lK:avgLK,rK:avgRK,lE:avgLE,rE:avgRE};
     techSettleFrames=0;
-    if(smVel<V_END&&techPeakVel>V_START){
-      techPhase='settling';
-    }
+    if(smVel<V_END&&techPeakVel>V_START) techPhase='settling';
   }
   if(techPhase==='settling'){
-    techSettleFrames=(techSettleFrames||0)+1;
-    // 완전히 멈추거나 타임아웃(25프레임) 시 채점
+    techSettleFrames++;
     if(smVel<0.8||techSettleFrames>=25){
-      const effectivePeak=Math.max(techPeakVel, rawPeakVel*0.85);
+      const effectivePeak=Math.max(techPeakVel,rawPeakVel*0.85);
       if(effectivePeak>3&&techBestAngles){
         const ts=scoreTech(techBestAngles,effectivePeak,lm,hipY,shY,sw);
         techHistory.push(ts);
-        if(techHistory.length>TECH_MAX)techHistory.shift();
-        dbg('✅ 기술완료 v='+effectivePeak.toFixed(1)+' 서기:'+ts.stance+' 손:'+ts.arm+' 절도:'+ts.power);
+        if(techHistory.length>TECH_MAX) techHistory.shift();
+        dbg('✅ 기술 v='+effectivePeak.toFixed(1)+' 서기:'+ts.stance+' 손:'+ts.arm+' 절도:'+ts.power);
       }
-      techPhase='idle';techPeakVel=0;rawPeakVel=0;techBestAngles=null;techBestQ=0;techSettleFrames=0;
+      techPhase='idle'; techPeakVel=0; rawPeakVel=0;
+      techBestAngles=null; techBestQ=0; techSettleFrames=0;
     }
   }
 
-  // ── bodyRef 동적 보정 (앞으로 와도 정확한 비율)
-  if(bodyRef.calibrated) updateBodyRef(lm);
-
-  // ── 발차기 감지
-  const ankleY=Math.min(la.y,ra.y);
-  kickHeight=Math.max(0,hipY-ankleY);
-  let kickBonus=0;
-  if(kickHeight>0.04&&!kickCooldown){
+  // 발차기 감지 (threshold 높여서 과민 감지 방지)
+  const ankY=Math.min(la.y,ra.y);
+  kickHeight=Math.max(0,hipY-ankY);
+  if(kickHeight>0.08&&!kickCooldown){
     maxKickHeight=Math.max(maxKickHeight,kickHeight);
     const kr=kickHeight/Math.max(hipY-shY,0.01);
-    kickBonus=kr>=1.0?5:kr>=0.7?4:kr>=0.4?3:kr>=0.2?2:1;
+    const kb=kr>=1.0?5:kr>=0.7?4:kr>=0.4?3:kr>=0.2?2:1;
     if(!kickDetected){
-      kickDetected=true;kickCooldown=true;
-      showBadge('kickBadge');
-      // 발차기를 기술 이력에 추가
-      techHistory.push({stance:Math.max(lastScore.stance,10),arm:Math.max(lastScore.arm,10),power:Math.min(lastScore.power+kickBonus,20)});
-      if(techHistory.length>TECH_MAX)techHistory.shift();
+      kickDetected=true; kickCooldown=true; showBadge('kickBadge');
+      techHistory.push({stance:Math.max(lastScore.stance,10),arm:Math.max(lastScore.arm,10),power:Math.min(lastScore.power+kb,20)});
+      if(techHistory.length>TECH_MAX) techHistory.shift();
       setTimeout(()=>{kickDetected=false;kickCooldown=false;},1000);
     }
-  }else if(kickHeight<0.015)kickDetected=false;
+  }else if(kickHeight<0.04) kickDetected=false;
 
-  // ── 기술 이력 가중 평균 (최근일수록 높은 가중치)
-  let stanceScore=0,armScore=0,powerScore=0;
+  // 기술 이력 가중 평균
+  let stanceScore=0, armScore=0, powerScore=0;
   if(techHistory.length>0){
     let wS=0,wA=0,wP=0,wT=0;
     techHistory.forEach((ts,i)=>{
-      const w=Math.pow(0.92,techHistory.length-1-i); // 지수 감쇠
-      wT+=w;wS+=ts.stance*w;wA+=ts.arm*w;wP+=ts.power*w;
+      const w=Math.pow(0.92,techHistory.length-1-i);
+      wT+=w; wS+=ts.stance*w; wA+=ts.arm*w; wP+=ts.power*w;
     });
-    stanceScore=wS/wT;armScore=wA/wT;powerScore=wP/wT;
+    stanceScore=wS/wT; armScore=wA/wT; powerScore=wP/wT;
   }
 
-  // ── 자세 (매 프레임 채점)
+  // 자세 (매 프레임)
   const sTilt=Math.abs(ls.y-rs.y)/sw;
   const hTilt=Math.abs(lh.y-rh.y)/sw;
   const sLean=Math.abs((ls.x+rs.x)/2-(lh.x+rh.x)/2)/sw;
-  const headD=lm[0]?Math.abs(lm[0].x-(ls.x+rs.x)/2)/sw:0;
   let postureScore=20;
-  if(sTilt>0.04)postureScore-=sTilt*15;
-  if(hTilt>0.04)postureScore-=hTilt*12;
-  if(sLean>0.07)postureScore-=sLean*10;
-  if(headD>0.1)postureScore-=headD*6;
+  if(sTilt>0.04) postureScore-=sTilt*15;
+  if(hTilt>0.04) postureScore-=hTilt*12;
+  if(sLean>0.07) postureScore-=sLean*10;
   postureScore=Math.max(11,Math.min(20,postureScore));
 
-  // ── 균형
+  // 균형
   let balScore=10;
-  if(sTilt>0.04)balScore-=sTilt*12;
-  if(hTilt>0.04)balScore-=hTilt*9;
+  if(sTilt>0.04) balScore-=sTilt*12;
+  if(hTilt>0.04) balScore-=hTilt*9;
   balScore=Math.max(5,Math.min(10,balScore));
 
-  // ── 리듬 (기술 개수 + 움직임 일관성)
+  // 리듬
   let rhythmScore=0;
   if(motionHist.length>8){
     const am=motionHist.reduce((a,b)=>a+b,0)/motionHist.length;
     if(am>0.003){
       const cv=Math.sqrt(motionHist.reduce((a,b)=>a+Math.pow(b-am,2),0)/motionHist.length)/am;
-      const actS=Math.min(am*180,5);
-      const conS=Math.max(0,5-cv*2.5);
-      rhythmScore=Math.min(actS*0.5+conS*0.5+Math.min(techHistory.length*0.25,2),10);
+      rhythmScore=Math.min((Math.min(am*180,5))*0.5+(Math.max(0,5-cv*2.5))*0.5+Math.min(techHistory.length*0.25,2),10);
     }
   }
 
-  // ── 비대칭 스무딩 (올라갈때 빠르게, 내려갈때 아주 느리게)
-  const smUp=0.30,smDown=0.02; // 올라갈 때 더 빠르게
-  function sm(p,n){return n>p?p*(1-smUp)+n*smUp:p*(1-smDown)+n*smDown;}
-  lastScore.stance=sm(lastScore.stance,stanceScore);
-  lastScore.arm=sm(lastScore.arm,armScore);
-  lastScore.posture=sm(lastScore.posture,postureScore);
-  lastScore.power=sm(lastScore.power,powerScore);
-  lastScore.balance=sm(lastScore.balance,balScore);
-  lastScore.rhythm=sm(lastScore.rhythm,rhythmScore);
+  // 스무딩
+  const smUp=0.30, smDown=0.02;
+  const sm=(p,n)=>n>p?p*(1-smUp)+n*smUp:p*(1-smDown)+n*smDown;
+  lastScore.stance  = sm(lastScore.stance,  stanceScore);
+  lastScore.arm     = sm(lastScore.arm,     armScore);
+  lastScore.posture = sm(lastScore.posture, postureScore);
+  lastScore.power   = sm(lastScore.power,   powerScore);
+  lastScore.balance = sm(lastScore.balance, balScore);
+  lastScore.rhythm  = sm(lastScore.rhythm,  rhythmScore);
 
   // 피크 갱신
   Object.keys(peakScore).forEach(k=>peakScore[k]=Math.max(peakScore[k],lastScore[k]));
 }
 
-// ── 기술 중 자세 품질 평가 (최고 순간 포착용)
+// ── 기술 품질 평가
 function evalQ(lK,rK,lE,rE){
-  const fK=Math.min(lK,rK),bK=Math.max(lK,rK);
-  const extE=Math.max(lE,rE),retE=Math.min(lE,rE);
-  // 서기: 무릎이 굽혀진 정도 (더 관대하게)
+  const fK=Math.min(lK,rK);
+  const extE=Math.max(lE,rE), retE=Math.min(lE,rE);
   const stQ=fK>=100&&fK<=175?Math.max(0,1-Math.abs(fK-140)/40):0.3;
-  // 팔 뻗기: 조건 완화
   const armQ=extE>=120?(extE-120)/60:0.2;
-  // 당기기: 조건 완화
   const retQ=retE<=140?(140-retE)/80:0;
-  // 기본점 추가 (항상 최소 0.3 이상)
-  return Math.max(0.3, stQ*0.4+armQ*0.4+retQ*0.2);
+  return Math.max(0.3,stQ*0.4+armQ*0.4+retQ*0.2);
 }
 
-// ── 참조 각도 기반 정확도 점수 계산
-function refAccuracy(actual, ref) {
+// ── 참조 각도 정확도
+function refAcc(actual,ref){
   if(!ref) return 0.5;
-  const dev = Math.abs(actual - ref.mean);
-  const s   = ref.std > 0 ? ref.std : 15;
-  return Math.max(0, 1 - dev / (s * 2));
+  const dev=Math.abs(actual-ref.mean);
+  const s=ref.std>0?ref.std:15;
+  return Math.max(0,1-dev/(s*2));
 }
 
-// ── 완료된 기술 채점 (학습 데이터 + WT 공식 기준 혼합)
+// ── 기술 채점 (학습 데이터 + WT 기준)
 function scoreTech(angles,peakVel,lm,hipY,shY,sw){
   const {lK,rK,lE,rE}=angles;
-  const la=lm?lm[27]:null,ra=lm?lm[28]:null;
+  const la=lm?lm[27]:null, ra=lm?lm[28]:null;
   const ref=REFERENCE_ANGLES[currentPoomsae]||null;
+  const fK=Math.min(lK,rK), bK=Math.max(lK,rK);
 
   // ① 서기 (20점)
-  const fK=Math.min(lK,rK),bK=Math.max(lK,rK);
   let stance=0;
   if(ref){
-    // 학습 데이터 기반: 참조 각도와 가까울수록 높은 점수
-    const lAcc = refAccuracy(lK, ref.left_knee);
-    const rAcc = refAccuracy(rK, ref.right_knee);
-    stance = Math.round((lAcc+rAcc)/2 * 16); // 최대 16점 기본
-    // 앞굽이 형태 보너스 (WT 기준 유지)
+    const lA=refAcc(lK,ref.left_knee), rA=refAcc(rK,ref.right_knee);
+    stance=Math.round((lA+rA)/2*16);
     if(fK>=120&&fK<=165) stance=Math.min(stance+4,20);
     if(bK>=145&&bK<=180) stance=Math.min(stance+2,20);
-  } else {
-    // 학습 데이터 없으면 기존 방식
+  }else{
     if(fK>=125&&fK<=155) stance=14+Math.round((1-Math.abs(fK-140)/15)*4);
-    else if(fK>=110&&fK<125) stance=10;
-    else if(fK>155&&fK<=170) stance=10;
+    else if(fK>=110) stance=10;
     else if(fK>170) stance=6;
     else stance=4;
     if(bK>=155&&bK<=178) stance=Math.min(stance+4,20);
@@ -782,37 +786,26 @@ function scoreTech(angles,peakVel,lm,hipY,shY,sw){
   stance=Math.min(Math.round(stance),20);
 
   // ② 손기술 (20점)
-  const extE=Math.max(lE,rE),retE=Math.min(lE,rE);
+  const extE=Math.max(lE,rE), retE=Math.min(lE,rE);
   let arm=0;
   if(ref){
-    // 학습 데이터 기반
-    const lAcc = refAccuracy(lE, ref.left_elbow);
-    const rAcc = refAccuracy(rE, ref.right_elbow);
-    arm = Math.round((lAcc+rAcc)/2 * 14); // 최대 14점 기본
-    // 뻗기/당기기 보너스 (WT 기준 유지)
+    const lA=refAcc(lE,ref.left_elbow), rA=refAcc(rE,ref.right_elbow);
+    arm=Math.round((lA+rA)/2*14);
     if(extE>=160) arm=Math.min(arm+4,20);
     else if(extE>=145) arm=Math.min(arm+2,20);
     if(retE<=80) arm=Math.min(arm+4,20);
     else if(retE<=110) arm=Math.min(arm+2,20);
-  } else {
-    if(extE>=170) arm=11;
-    else if(extE>=160) arm=9;
-    else if(extE>=150) arm=7;
-    else if(extE>=135) arm=5;
-    else arm=3;
-    if(retE<=60) arm+=7;
-    else if(retE<=80) arm+=6;
-    else if(retE<=100) arm+=5;
-    else if(retE<=120) arm+=3;
-    else if(retE<=140) arm+=1;
+  }else{
+    if(extE>=170) arm=11; else if(extE>=160) arm=9;
+    else if(extE>=150) arm=7; else if(extE>=135) arm=5; else arm=3;
+    if(retE<=60) arm+=7; else if(retE<=80) arm+=6;
+    else if(retE<=100) arm+=5; else if(retE<=120) arm+=3; else if(retE<=140) arm+=1;
   }
   arm=Math.min(Math.round(arm),20);
 
-  // ③ 절도 (20점) — RAW 피크 기반 로그스케일
+  // ③ 절도 (20점) — 로그스케일
   let power=0;
-  if(peakVel>=5){
-    power=Math.min(Math.round(Math.log(peakVel/5+1)/Math.log(12)*20),20);
-  }
+  if(peakVel>=5) power=Math.min(Math.round(Math.log(peakVel/5+1)/Math.log(12)*20),20);
   if(arm>=16&&peakVel>=25) power=Math.min(power+3,20);
   else if(arm>=12&&peakVel>=15) power=Math.min(power+2,20);
   else if(arm>=10&&peakVel>=10) power=Math.min(power+1,20);
@@ -822,101 +815,69 @@ function scoreTech(angles,peakVel,lm,hipY,shY,sw){
 
 function updateLiveUI(){
   const sc=isFrozen?frozenAt:lastScore;
-  const kiaiB=Math.min(kiaiCount,5);
-  const total=Math.min(sc.stance+sc.arm+sc.posture+sc.power+sc.balance+sc.rhythm+kiaiB,100);
+  const kb=Math.min(kiaiCount,5);
+  const total=Math.min(Math.round(sc.stance+sc.arm+sc.posture+sc.power+sc.balance+sc.rhythm)+kb,100);
   document.getElementById('sStance').textContent=sc.stance.toFixed(0);
   document.getElementById('sArm').textContent=sc.arm.toFixed(0);
   document.getElementById('sPosture').textContent=sc.posture.toFixed(0);
   document.getElementById('sPower').textContent=sc.power.toFixed(0);
   document.getElementById('sBalance').textContent=sc.balance.toFixed(0);
   document.getElementById('sRhythm').textContent=sc.rhythm.toFixed(0);
-  document.getElementById('liveTotal').textContent=total.toFixed(0);
+  document.getElementById('liveTotal').textContent=total;
 }
 
+// ══════════════════════════════════════════════════════
+// ── 측정 종료
+// ══════════════════════════════════════════════════════
 function stopMeasure(){
-  isRunning=false;isScoring=false;isLocked=false;
+  isRunning=false; isScoring=false; isLocked=false;
   if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;}
   if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
   if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}
+  if(window._ro){window._ro.disconnect();}
 
-  // 동결된 점수 또는 누적 평균 중 더 좋은 것 사용
-  const avgSc={
-    stance:Math.max(av(sA.stance),peakScore.stance*0.9),
-    arm:Math.max(av(sA.arm),peakScore.arm*0.9),
-    posture:Math.max(av(sA.posture),peakScore.posture*0.9),
-    power:Math.max(av(sA.power),peakScore.power*0.9),
-    balance:Math.max(av(sA.balance),peakScore.balance*0.9),
-    rhythm:Math.max(av(sA.rhythm),peakScore.rhythm*0.9),
+  // 최종 점수: 피크 점수 사용 (sA 대신 peakScore 직접 사용)
+  const sc=isFrozen&&frozenAt?frozenAt:lastScore;
+  const fin={
+    stance:  Math.max(sc.stance,  peakScore.stance  *0.9),
+    arm:     Math.max(sc.arm,     peakScore.arm     *0.9),
+    posture: Math.max(sc.posture, peakScore.posture *0.9),
+    power:   Math.max(sc.power,   peakScore.power   *0.9),
+    balance: Math.max(sc.balance, peakScore.balance *0.9),
+    rhythm:  Math.max(sc.rhythm,  peakScore.rhythm  *0.9),
   };
-  if(isFrozen&&frozenAt){
-    Object.keys(avgSc).forEach(k=>avgSc[k]=Math.max(avgSc[k],frozenAt[k]));
-  }
+  const kb=Math.min(kiaiCount,5);
+  const total=Math.min(Math.round(Object.values(fin).reduce((s,v)=>s+v,0)+kb),100);
 
-  const kiaiB=Math.min(kiaiCount,5);
-  const total=Math.min(Math.round(Object.values(avgSc).reduce((s,v)=>s+v,0)+kiaiB),100);
-
-  aiScoreData={...avgSc,kiai:kiaiB,total};
-  adjustments={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0}; aiScoreData.total=total;
-  deductCounts=[0,0,0,0];
+  aiScoreData={...fin,kiai:kb,total};
+  adjustments={stance:0,arm:0,posture:0,power:0,balance:0,rhythm:0};
   judgeScores={j0:0,j1:0,j2:0,j3:0};
 
   document.getElementById('adjName').textContent=currentName+' 선수';
   document.getElementById('adjAI').textContent=total;
-  document.getElementById('adjSub').textContent=`AI 측정 ${total}점 / 100점 만점 | 기합 ${kiaiCount}회 (+${kiaiB}점) | 최고 발차기 높이 ${(maxKickHeight*100).toFixed(0)}%`;
-  buildAdjustList();buildJudgeItems();updateFinalSummary();
+  document.getElementById('adjSub').textContent=
+    `AI ${total}점 | 기합 ${kiaiCount}회(+${kb}점) | 최고발차기 ${(maxKickHeight*100).toFixed(0)}%`;
+
+  buildAdjustList(); buildJudgeItems(); updateFinalSummary();
   showScreen('s4');
 }
 
-function buildJudgeItems(){
-  const wrap=document.getElementById('judgeItems');
-  wrap.innerHTML='';
-  JUDGE_ITEMS.forEach(item=>{
-    const val=judgeScores[item.id];
-    const valClass=val>0?'pos':val<0?'neg':'zero';
-    const div=document.createElement('div');
-    div.className='judge-item';
-    div.innerHTML=`
-      <div class="judge-label">
-        <span class="judge-name">${item.name}</span>
-        <span class="judge-pts">${item.minusLabel} &nbsp;|&nbsp; ${item.plusLabel}</span>
-      </div>
-      <button class="jbtn jbtn-minus" onclick="tapJudge('${item.id}',-1)">−</button>
-      <span class="judge-val ${valClass}" id="${item.id}_val">${val>=0?'+':''}${val}</span>
-      <button class="jbtn jbtn-plus" onclick="tapJudge('${item.id}',+1)">+</button>`;
-    wrap.appendChild(div);
-  });
-}
-
-function tapJudge(id, dir){
-  const item=JUDGE_ITEMS.find(i=>i.id===id);
-  if(dir>0) judgeScores[id]+=item.plus;
-  else judgeScores[id]+=item.minus;
-  // 최소/최대 제한
-  judgeScores[id]=Math.max(item.minus*3, Math.min(item.plus*3, judgeScores[id]));
-  const val=judgeScores[id];
-  const el=document.getElementById(id+'_val');
-  el.textContent=(val>=0?'+':'')+val;
-  el.className='judge-val '+(val>0?'pos':val<0?'neg':'zero');
-  updateFinalSummary();
-}
-
+// ══════════════════════════════════════════════════════
+// ── 조정 화면
+// ══════════════════════════════════════════════════════
 function buildAdjustList(){
-  const list=document.getElementById('adjustList');list.innerHTML='';
+  const list=document.getElementById('adjustList'); list.innerHTML='';
   ITEMS.forEach(item=>{
     const ai=Math.round(aiScoreData[item.key]);
-    const div=document.createElement('div');div.className='adjust-item';
-    div.innerHTML=`
-      <button class="adj-btn adj-minus" onclick="adjust('${item.key}',-1)">−</button>
-      <div class="adjust-item-label">
-        <span class="adjust-item-name">${item.label}</span>
-        <span class="adjust-item-ai">AI: ${ai} / ${item.max}점</span>
-      </div>
+    const div=document.createElement('div'); div.className='adjust-item';
+    div.innerHTML=`<button class="adj-btn adj-minus" onclick="adjust('${item.key}',-1)">−</button>
+      <div class="adjust-item-label"><span class="adjust-item-name">${item.label}</span>
+      <span class="adjust-item-ai">AI: ${ai} / ${item.max}점</span></div>
       <span class="adjust-val" id="av_${item.key}">${ai}</span>
       <button class="adj-btn adj-plus" onclick="adjust('${item.key}',+1)">+</button>`;
     list.appendChild(div);
   });
 }
-
 function adjust(key,delta){
   adjustments[key]=(adjustments[key]||0)+delta;
   const item=ITEMS.find(i=>i.key===key);
@@ -924,20 +885,35 @@ function adjust(key,delta){
   document.getElementById('av_'+key).textContent=cur;
   updateFinalSummary();
 }
-
-function tapDeduct(i){
-  deductCounts[i]++;if(deductCounts[i]>9)deductCounts[i]=0;
-  document.getElementById('dn'+i).textContent=deductCounts[i];
-  document.getElementById('db'+i).classList.toggle('on',deductCounts[i]>0);
+function buildJudgeItems(){
+  const wrap=document.getElementById('judgeItems'); wrap.innerHTML='';
+  JUDGE_ITEMS.forEach(item=>{
+    const val=judgeScores[item.id];
+    const vc=val>0?'pos':val<0?'neg':'zero';
+    const div=document.createElement('div'); div.className='judge-item';
+    div.innerHTML=`<div class="judge-label"><span class="judge-name">${item.name}</span>
+      <span class="judge-pts">${item.ml} | ${item.pl}</span></div>
+      <button class="jbtn jbtn-minus" onclick="tapJudge('${item.id}',-1)">−</button>
+      <span class="judge-val ${vc}" id="${item.id}_val">${val>=0?'+':''}${val}</span>
+      <button class="jbtn jbtn-plus" onclick="tapJudge('${item.id}',+1)">+</button>`;
+    wrap.appendChild(div);
+  });
+}
+function tapJudge(id,dir){
+  const item=JUDGE_ITEMS.find(i=>i.id===id);
+  judgeScores[id]+=(dir>0?item.plus:item.minus);
+  judgeScores[id]=Math.max(item.minus*3,Math.min(item.plus*3,judgeScores[id]));
+  const val=judgeScores[id];
+  const el=document.getElementById(id+'_val');
+  el.textContent=(val>=0?'+':'')+val;
+  el.className='judge-val '+(val>0?'pos':val<0?'neg':'zero');
   updateFinalSummary();
 }
-
 function updateFinalSummary(){
   const aiT=aiScoreData.total;
   const adjT=Object.values(adjustments).reduce((s,v)=>s+v,0);
   const judgeT=Object.values(judgeScores).reduce((s,v)=>s+v,0);
-  const total=aiT+adjT+judgeT;
-  const final=Math.max(0,Math.min(100,total));
+  const final=Math.max(0,Math.min(100,aiT+adjT+judgeT));
   document.getElementById('sumAI').textContent=aiT;
   document.getElementById('sumAdj').textContent=(adjT>=0?'+':'')+adjT;
   document.getElementById('sumAdj').style.color=adjT>=0?'#4ade80':'#f87171';
@@ -945,7 +921,6 @@ function updateFinalSummary(){
   document.getElementById('sumDeduct').style.color=judgeT>=0?'#4ade80':'#f87171';
   document.getElementById('sumFinal').textContent=final;
 }
-
 function confirmScore(){
   const adjT=Object.values(adjustments).reduce((s,v)=>s+v,0);
   const judgeT=Object.values(judgeScores).reduce((s,v)=>s+v,0);
@@ -953,37 +928,44 @@ function confirmScore(){
   players.push({name:currentName,final,ai:aiScoreData.total,adj:adjT,judge:judgeT,kiai:kiaiCount,detail:{...aiScoreData}});
   document.getElementById('showRankBtn').style.display='';
   document.getElementById('nameInput').value='';
-  renderRank();showScreen('s5');
+  renderRank(); showScreen('s5');
 }
-
 function remeasure(){document.getElementById('nameInput').value=currentName;showScreen('s1');}
 
+// ══════════════════════════════════════════════════════
+// ── 순위
+// ══════════════════════════════════════════════════════
 function renderRank(){
   const sorted=[...players].sort((a,b)=>b.final-a.final);
   const medals=['🥇','🥈','🥉','④','⑤','⑥','⑦','⑧','⑨','⑩'];
   const cls=['r1','r2','r3','','','','','','',''];
-  const list=document.getElementById('rankList');list.innerHTML='';
+  const list=document.getElementById('rankList'); list.innerHTML='';
   sorted.forEach((p,i)=>{
-    const div=document.createElement('div');div.className='rank-item '+(cls[i]||'');
+    const div=document.createElement('div'); div.className='rank-item '+(cls[i]||'');
     div.innerHTML=`<div class="rank-medal">${medals[i]||i+1}</div>
-      <div class="rank-info">
-        <div class="rank-name">${p.name}</div>
-        <div class="rank-detail">AI ${p.ai} ${p.adj>=0?'+':''}${p.adj} 조정 ${p.judge>=0?'+':''}${p.judge} 심판 | 기합 ${p.kiai}회<br>
-        서기 ${Math.round(p.detail.stance)} | 손기술 ${Math.round(p.detail.arm)} | 자세 ${Math.round(p.detail.posture)} | 절도 ${Math.round(p.detail.power)} | 균형 ${Math.round(p.detail.balance)} | 리듬 ${Math.round(p.detail.rhythm)}</div>
-      </div>
+      <div class="rank-info"><div class="rank-name">${p.name}</div>
+      <div class="rank-detail">AI ${p.ai} ${p.adj>=0?'+':''}${p.adj}조정 ${p.judge>=0?'+':''}${p.judge}심판 | 기합${p.kiai}회<br>
+      서기${Math.round(p.detail.stance)} 손${Math.round(p.detail.arm)} 자세${Math.round(p.detail.posture)} 절도${Math.round(p.detail.power)} 균형${Math.round(p.detail.balance)} 리듬${Math.round(p.detail.rhythm)}</div></div>
       <div class="rank-score">${p.final}</div>`;
     list.appendChild(div);
   });
 }
-
 function goRank(){renderRank();showScreen('s5');}
 function goInput(){showScreen('s1');}
 function resetAll(){players=[];document.getElementById('showRankBtn').style.display='none';showScreen('s1');}
+
+// ══════════════════════════════════════════════════════
+// ── 유틸
+// ══════════════════════════════════════════════════════
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
-function showBadge(id){const b=document.getElementById(id);b.style.display='block';setTimeout(()=>b.style.display='none',700);}
-function d(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
-function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
-function a3(a,b,c){
+function showBadge(id){
+  const b=document.getElementById(id);
+  b.style.opacity='1';
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>{b.style.opacity='0';},700);
+}
+function dst(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
+function ang(a,b,c){
   if(!a||!b||!c)return 135;
   if((a.visibility||1)<0.2||(b.visibility||1)<0.2||(c.visibility||1)<0.2)return 135;
   const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y};
@@ -993,12 +975,12 @@ function a3(a,b,c){
 }
 function pushH(k,v){aH[k].push(v);if(aH[k].length>HIST)aH[k].shift();}
 function avgH(k){return aH[k].length?aH[k].reduce((a,b)=>a+b,0)/aH[k].length:135;}
-function av(arr){return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;}
 function setCam(t,s){document.getElementById('camTxt').textContent=t;document.getElementById('camSub').textContent=s;}
 function dbg(t){document.getElementById('dbg').textContent=t;}
 async function waitLibs(){
   return new Promise(res=>{
-    const s=Date.now();const t=setInterval(()=>{
+    const s=Date.now();
+    const t=setInterval(()=>{
       if(window.Pose&&window.drawConnectors){clearInterval(t);res();}
       else if(Date.now()-s>25000){clearInterval(t);res();}
     },300);
