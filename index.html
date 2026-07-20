@@ -423,6 +423,7 @@ async function startMeasure(){
   syncCanvas();
 
   isRunning=true; isLocked=false; isScoring=false;
+  _mpBusy=false;
   loop();
 }
 
@@ -516,10 +517,18 @@ async function initPose(){
   }catch(e){dbg('❌:'+e.message); return false;}
 }
 
-async function loop(){
+// ── 논블로킹 루프: MediaPipe 처리 중에도 RAF 계속 실행
+// await를 쓰면 발차기 같은 복잡한 프레임 처리 중 RAF가 멈춰 스켈레톤 고정됨
+let _mpBusy = false;
+function loop(){
   if(!isRunning) return;
-  if(video.readyState>=2&&poseInst) try{await poseInst.send({image:video});}catch(e){}
-  if(isRunning) requestAnimationFrame(loop);
+  requestAnimationFrame(loop); // 항상 먼저 다음 프레임 예약
+  if(!_mpBusy && video.readyState>=2 && poseInst){
+    _mpBusy = true;
+    poseInst.send({image:video})
+      .then(()=>{ _mpBusy=false; })
+      .catch(()=>{ _mpBusy=false; });
+  }
 }
 
 // ── canvas ↔ video 크기 동기화 (독립 함수)
@@ -611,19 +620,27 @@ function scoreLM(lm){
   // 움직임
   let motion=0;
   if(prevLM){
-    motion=dst(lw,prevLM[15])+dst(rw,prevLM[16])+dst(lk,prevLM[25])*0.5+dst(rk,prevLM[26])*0.5;
+    // 손목+무릎+발목 모두 측정 (발차기 중 발목 움직임도 캡처)
+    motion = dst(lw,prevLM.lw) + dst(rw,prevLM.rw)
+           + dst(lk,prevLM.lk)*0.6 + dst(rk,prevLM.rk)*0.6
+           + dst(la,prevLM.la)*0.4 + dst(ra,prevLM.ra)*0.4;
     motionHist.push(motion); if(motionHist.length>30) motionHist.shift();
-    if(motion>0.005) frameSince=0; else frameSince++;
+    if(motion>0.003) frameSince=0; else frameSince++;
   }
-  prevLM=lm;
+  // 값 복사 저장 (레퍼런스 저장 시 MediaPipe 재사용 객체면 motion=0 버그)
+  prevLM={
+    lw:{x:lw.x,y:lw.y}, rw:{x:rw.x,y:rw.y},
+    lk:{x:lk.x,y:lk.y}, rk:{x:rk.x,y:rk.y},
+    la:{x:la.x,y:la.y}, ra:{x:ra.x,y:ra.y}
+  };
 
   // 10초 동결
   const elapsed=scoringStartTime?(Date.now()-scoringStartTime)/1000:0;
-  if(elapsed>10&&frameSince>=18){
+  if(elapsed>10&&frameSince>=60){
     if(!isFrozen){isFrozen=true;frozenAt={...lastScore};dbg('❄️ 점수 동결!');}
     return;
   }
-  if(elapsed<=10&&frameSince>=18){dbg('⏱ 대기 (10초 보호)');return;}
+  if(elapsed<=10&&frameSince>=60){dbg('⏱ 대기 (10초 보호)');return;}
 
   // 각도 계산
   const lKA=ang(lh,lk,la), rKA=ang(rh,rk,ra);
